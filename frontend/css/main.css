@@ -789,7 +789,11 @@ button, input, select {
     }
 
     .app-footer {
-        display: none; /* Desktop uses sidebar or top nav */
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
     }
 
     /* Add desktop sidebar navigation in future */
