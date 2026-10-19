@@ -963,6 +963,17 @@ def delete_nutrition(recipe_id: int):
             raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
 
 
+@app.get("/grocery-lists")
+def get_grocery_lists():
+    """Get all grocery lists (stub - feature not yet implemented)."""
+    return {"success": True, "grocery_lists": [], "warning": "Grocery lists feature not yet implemented."}
+
+
+@app.post("/grocery-lists")
+def create_grocery_list(data: dict):
+    """Create a grocery list (stub)."""
+    return {"success": True, "message": "Grocery list created"}
+
 # Photos endpoints (from photos.py)
 @app.get("/recipes/{recipe_id}/photos", response_model=list[dict])
 def get_recipe_photos(recipe_id: int):
