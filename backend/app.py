@@ -1,5 +1,6 @@
 """Food Webapp FastAPI backend with recipe and nutrition support."""
 from fastapi import FastAPI, Depends, HTTPException, status, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional, TYPE_CHECKING
