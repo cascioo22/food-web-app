@@ -1,9 +1,26 @@
 """Food Webapp FastAPI backend with recipe and nutrition support."""
 from fastapi import FastAPI, Depends, HTTPException, status, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional, TYPE_CHECKING
 from contextlib import contextmanager
+from typing import Dict, Any
+
+# Import photo utilities
+try:
+    from photos import validate_image_data, generate_safe_filename, delete_photo
+except ImportError:
+    # Functions not yet defined - placeholder for future implementation
+    def validate_image_data(image_data_url):
+        return {"success": False, "error": "Photo validation not implemented"}
+    
+    def generate_safe_filename(original_filename):
+        import uuid
+        return f"safe_{uuid.uuid4().hex}"
+
+    def delete_photo(filename):
+        return {"success": True, "message": f"Photo {filename} deleted (stub)"}
 
 if TYPE_CHECKING:
     from pydantic.main import BaseModel
