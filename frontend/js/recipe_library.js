@@ -4,7 +4,7 @@
  */
 
 (function() {
-    const API_BASE = '/api'; // Local FastAPI server
+    const API_BASE = ''; // Local FastAPI server
     
     let recipes = [];
     let currentRecipeId = null;
