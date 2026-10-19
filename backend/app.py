@@ -9,7 +9,7 @@ from contextlib import contextmanager
 if TYPE_CHECKING:
     from pydantic.main import BaseModel
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, ForeignKey, func, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, ForeignKey, func, Boolean, select
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
