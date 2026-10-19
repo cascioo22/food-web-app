@@ -15,9 +15,13 @@ from datetime import datetime, timezone
 
 import sys
 import os
+import base64
 
 # Add the project root to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Constants
+PHOTO_UPLOAD_DIR = "/opt/data/home/food-webapp-project/uploads/photos"
 
 # Database setup
 SQLALCHEMY_DATABASE_URL = os.getenv(
