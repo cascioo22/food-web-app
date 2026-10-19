@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Gallery</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <h1 class="sr-only">Food Webapp</h1>
+        <a href="index.html" class="logo-link">🍎 Recipes</a>
+    </header>
+
+    <!-- Upload Section -->
+    <section class="upload-section">
+        <button id="upload-btn" class="btn btn-primary">📸 Add Photo</button>
+        <input type="file" id="file-input" accept="image/*" hidden>
+    </section>
+
+    <!-- Gallery Grid -->
+    <main id="gallery-grid" class="grid" aria-label="Finished food photos">
+        <!-- Loading State -->
+        <div class="loading-state">
+            <svg class="spinner" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="20" fill="none" stroke="#3498db" stroke-width="4"/>
+            </svg>
+            <p>Loading photos...</p>
+        </div>
+
+        <!-- Empty State -->
+        <section class="empty-state hidden">
+            <span aria-hidden="true">📷</span>
+            <h2>No photos yet</h2>
+            <p>Capture your finished dishes to inspire others!</p>
+            <button id="upload-btn-inline" class="btn btn-primary">Take Photo</button>
+        </section>
+
+        <!-- Error State -->
+        <section class="error-state hidden" aria-live="polite">
+            <span aria-hidden="true">⚠️</span>
+            <h2>Error loading photos</h2>
+            <p>Please try again later.</p>
+            <button id="retry-gallery-btn" class="btn btn-primary">Retry</button>
+        </section>
+    </main>
+
+    <!-- Photo Modal -->
+    <div id="photo-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="photo-modal-title">
+        <div class="modal-backdrop"></div>
+        <article id="photo-detail" class="modal-content">
+            <header class="detail-header">
+                <h3 id="photo-modal-title">Photo</h3>
+                <button id="close-photo-modal" aria-label="Close photo modal">&times;</button>
+            </header>
+
+            <!-- Photo Display -->
+            <section class="photo-display">
+                <img id="modal-image" src="" alt="" loading="lazy">
+                <p id="broken-image-fallback" class="hidden" style="text-align:center;padding:20px;color:#666;">
+                    📷 Unable to display image
+                </p>
+            </section>
+
+            <!-- Caption & Linking Controls -->
+            <footer class="detail-actions">
+                <div style="flex:1;margin-right:8px;">
+                    <label for="caption-input" style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Caption</label>
+                    <input type="text" id="caption-input" placeholder="Enter caption..." style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+                </div>
+                <button id="save-caption-btn" class="btn btn-primary">Save Caption</button>
+                <button id="unlink-recipe-btn" class="btn btn-secondary">Unlink from Recipe</button>
+                <button id="delete-photo-btn" class="btn btn-secondary">Delete</button>
+            </footer>
+        </article>
+    </div>
+
+    <!-- Script -->
+    <script src="js/photos.js"></script>
+</body>
+</html>

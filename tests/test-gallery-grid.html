@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Responsive Test — Photo Gallery</title>
+    <link rel="stylesheet" href="../frontend/css/main.css">
+    <style>
+        .test-results { margin: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <header class="mobile-header">
+        <h1 class="sr-only">Food Webapp</h1>
+        <a href="../frontend/index.html" class="logo-link">🍎 Recipes</a>
+    </header>
+
+    <section class="upload-section">
+        <button id="upload-btn" class="btn btn-primary">📸 Add Photo</button>
+        <input type="file" id="file-input" accept="image/*" hidden>
+    </section>
+
+    <main id="gallery-grid" class="grid" aria-label="Finished food photos">
+        <!-- Gallery items injected dynamically -->
+    </main>
+
+    <footer class="app-footer">
+        <nav aria-label="Bottom navigation">
+            <a href="../frontend/index.html" class="nav-item">Recipes</a>
+            <a href="../frontend/lists.html" class="nav-item">Lists</a>
+            <a href="../frontend/photos.html" class="nav-item active">Photos</a>
+        </nav>
+    </footer>
+
+    <script>
+        // Mock photos for testing (using placeholder colors as images)
+        const mockPhotos = Array.from({length: 12}, (_, i) => ({
+            id: i.toString(),
+            description: `Dish ${i + 1}`,
+            dataUrl: ''
+        }));
+
+        const grid = document.getElementById('gallery-grid');
+
+        // Render gallery
+        function renderGallery() {
+            if (mockPhotos.length > 0) {
+                grid.innerHTML = mockPhotos.map((photo, idx) => `
+                    <div class="gallery-item" style="background:#${(idx * 52649 % 16777215).toString(16).padStart(6, '0')}">
+                        <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-weight:bold;">📷</span>
+                    </div>
+                `).join('');
+
+                // Run responsive test
+                runTest();
+            }
+        }
+
+        // Get computed grid columns
+        function getGridColumns() {
+            const grid = document.getElementById('gallery-grid');
+            const computed = getComputedStyle(grid);
+            return computed.gridTemplateColumns;
+        }
+
+        // Run responsive test
+        function runTest() {
+            const width = window.innerWidth;
+            const columns = getGridColumns();
+            let passed = true;
+            let resultText = '';
+
+            if (width < 600) {
+                resultText = columns.includes('2') ? '✅ PASS: Mobile (2 cols)' : `❌ FAIL: Expected 2 cols, got "${columns}"`;
+                passed = columns.includes('2');
+            } else if (width >= 600 && width < 900) {
+                resultText = columns.includes('3') ? '✅ PASS: Tablet (3 cols)' : `❌ FAIL: Expected 3 cols, got "${columns}"`;
+                passed = columns.includes('3');
+            } else if (width >= 900) {
+                resultText = columns.includes('4') ? '✅ PASS: Desktop (4 cols)' : `❌ FAIL: Expected 4 cols, got "${columns}"`;
+                passed = columns.includes('4');
+            }
+
+            // Display results in DOM
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test-results';
+            testDiv.innerHTML = `
+                <h2>🖼️ Gallery Responsive Test Result</h2>
+                <p><strong>Viewport:</strong> ${width}x${window.innerHeight}px</p>
+                <p><strong>Grid Columns:</strong> ${columns}</p>
+                <p class="${passed ? 'pass' : 'fail'}">${resultText}</p>
+                <p style="margin-top:10px;font-size:0.9rem;color:#666;">
+                    💡 Test at different sizes:<br>
+                    • Mobile: &lt;600px (should be 2 cols)<br>
+                    • Tablet: 600-899px (should be 3 cols)<br>
+                    • Desktop: ≥900px (should be 4 cols)
+                </p>
+            `;
+
+            // Insert after upload section
+            const uploadSection = document.querySelector('.upload-section');
+            if (uploadSection) {
+                uploadSection.parentNode.insertBefore(testDiv, uploadSection.nextSibling);
+            }
+
+            return passed;
+        }
+
+        // Run test on load and resize
+        window.addEventListener('load', renderGallery);
+        window.addEventListener('resize', () => {
+            const grid = document.getElementById('gallery-grid');
+            if (grid && grid.innerHTML === '') {
+                renderGallery();
+            } else if (grid) {
+                runTest();
+            }
+        });
+
+        // Run initial test
+        renderGallery();
+    </script>
+</body>
+</html>

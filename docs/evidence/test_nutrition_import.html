@@ -1,0 +1,63 @@
+# Nutrition Import (FW-13): Extract nutrition from recipe links
+
+## Summary
+Extended recipe import flow to extract and persist nutritional information from schema.org JSON-LD blocks. The importer preserves partial data without guessing missing values or overwriting user-entered nutrition.
+
+## Changes Made
+
+### Backend (`backend/recipe_import.py`)
+- Added `HAS_BEAUTIFULSOUP` flag for optional dependency detection
+- Defined `NUTRITION_FIELDS` constant with schema.org NutritionInformation field mappings
+- Added `nutrition_extracted` field to `RecipeImportResult` dataclass
+- Implemented `extract_nutrition_json_ld()` function to parse HTML and extract nutrition metadata:
+  - Searches for schema.org Recipe and NutritionInformation JSON-LD blocks
+  - Extracts nutrient values (calories, protein, carbs, fat, fiber, sugar, sodium)
+  - Handles both numeric and string-formatted values (e.g., "250 kcal")
+  - Returns `None` gracefully when no nutrition data is present
+- Updated `process_import()` to call extraction and include results in the return value
+
+### Backend (`backend/app_new.py`)
+- Modified `/recipes` POST endpoint to:
+  - Accept optional `html_content` field in request body
+  - Call nutrition extraction on imported HTML
+  - Auto-save extracted nutrition to Nutrition table when available
+  - Non-fatal errors (extraction/validation failures) don't prevent recipe import
+
+### Tests (`tests/test_nutrition_extraction.py`)
+- Comprehensive test suite covering:
+  - Complete nutrition metadata extraction
+  - Partial nutrition data handling  
+  - Absent nutrition (no JSON-LD found)
+  - Malformed/missing nutrition data
+  - Numeric vs. string value parsing
+  - Edge cases and error conditions
+
+## Storage/API Contract (from FW-12)
+The nutrition storage uses a separate `Nutrition` table with:
+- Per-serving values: calories, protein, carbs, fat, fiber, sugar, sodium  
+- Total recipe values: same fields as above
+- Optional serving_size field
+- All numeric fields are non-negative when provided
+- Missing fields stored as NULL (unknown), not zero
+- Partial data is fully supported
+
+## Acceptance Criteria Status
+
+✅ **Extract structured nutrition metadata** - schema.org Recipe/NutritionInformation JSON-LD parsing implemented  
+✅ **Preserve partial nutrition data** - only extracted fields are saved, no guessing  
+✅ **Allow missing/malformed pages to import successfully** - graceful error handling  
+✅ **Re-import/update preserves user-entered values** - existing Nutrition record is not overwritten during import  
+✅ **Fixture-based tests for all scenarios** - 8 test cases covering complete, partial, absent, malformed data  
+✅ **No AI-based estimation** - pure extraction from structured data only  
+
+## Limitations & Notes
+- Only extracts schema.org JSON-LD nutrition data (most reliable source)
+- Does NOT parse image alt text or other unstructured sources yet (could be added as enhancement)
+- Unit normalization is basic; expects common formats like "250 kcal" or "15g protein"
+- Requires BeautifulSoup library (optional dependency - graceful degradation if missing)
+
+## Next Steps / Future Enhancements
+- Support additional nutrition sources (microdata, OpenGraph, alt text)
+- Add configurable unit conversion (metric/imperial)
+- Implement serving size normalization across different bases
+- Frontend: Show nutrition data in recipe detail view

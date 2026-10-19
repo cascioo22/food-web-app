@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grocery Lists</title>
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        /* Item Edit Modal */
+        .item-edit-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .item-edit-modal.hidden {
+            display: none;
+        }
+        .item-edit-card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+        }
+        .item-edit-card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .item-edit-form textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .item-edit-form input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .item-delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(200, 50, 50, 0.9);
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .item-delete-btn:hover {
+            background: rgba(200, 50, 50, 1);
+        }
+        /* Completed item styling */
+        .item-completed .item-text {
+            text-decoration: line-through;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <h1 class="sr-only">Food Webapp</h1>
+        <a href="index.html" class="logo-link">🍎 Recipes</a>
+    </header>
+
+    <!-- Controls -->
+    <section class="controls-section">
+        <button id="add-list-btn" class="btn btn-primary">+ New List</button>
+    </section>
+
+    <!-- Lists Container -->
+    <main id="lists-container" class="grid" aria-label="Grocery lists">
+        <!-- Loading State -->
+        <div class="loading-state">
+            <svg class="spinner" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="20" fill="none" stroke="#3498db" stroke-width="4"/>
+            </svg>
+            <p>Loading lists...</p>
+        </div>
+    </main>
+
+    <!-- Empty State -->
+    <section class="empty-state hidden">
+        <span aria-hidden="true">🛒</span>
+        <h2>No grocery lists yet</h2>
+        <p>Create your first list to start shopping!</p>
+        <button id="add-list-btn-inline" class="btn btn-primary">Create List</button>
+    </section>
+
+    <!-- Error State -->
+    <section class="error-state hidden" aria-live="polite">
+        <span aria-hidden="true">⚠️</span>
+        <h2>Error loading lists</h2>
+        <p>Please try again later.</p>
+        <button id="retry-lists-btn" class="btn btn-primary">Retry</button>
+    </section>
+
+    <!-- List Modal -->
+    <div id="list-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
+        <div class="modal-backdrop"></div>
+        <article id="list-detail" class="modal-content">
+            <header class="detail-header">
+                <input type="text" id="list-name-input" placeholder="List name (e.g., Weekly Shopping)">
+                <button id="close-list-modal" aria-label="Close list modal">&times;</button>
+            </header>
+
+            <!-- List Items -->
+            <section class="items-section">
+                <ul id="items-list">
+                    <li class="item-template" hidden>
+                        <input type="checkbox" class="item-check" aria-label="Mark item complete">
+                        <span class="item-text">Item</span>
+                        <button class="item-delete" aria-label="Delete item">&times;</button>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Actions -->
+            <footer class="detail-actions">
+                <button id="add-item-btn" class="btn btn-primary">Add Item</button>
+                <button id="save-list-btn" class="btn btn-secondary">Save</button>
+            </footer>
+        </article>
+    </div>
+
+    <!-- Item Edit Modal -->
+    <div id="item-edit-modal" class="item-edit-modal hidden" role="dialog" aria-modal="true" aria-labelledby="item-edit-modal-title">
+        <div class="modal-backdrop"></div>
+        <article id="item-detail" class="item-edit-card">
+            <header class="detail-header">
+                <h3 id="item-edit-modal-title">Edit Item</h3>
+                <button id="close-item-edit-modal" aria-label="Close item edit modal">&times;</button>
+            </header>
+
+            <!-- Edit Form -->
+            <form class="item-edit-form">
+                <div class="form-group">
+                    <label for="edit-item-name-input">Item Name:</label>
+                    <input type="text" id="edit-item-name-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-item-completed-check">
+                        <input type="checkbox" id="edit-item-completed-check">
+                        Marked as purchased/complete
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" id="cancel-edit-item" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </article>
+    </div>
+
+    <!-- Script -->
+    <script src="js/lists.js"></script>
+</body>
+</html>

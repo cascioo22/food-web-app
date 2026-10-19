@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "food-webapp"
+version = "0.1.0"
+description = "Local-first recipe and grocery management webapp"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.32.0",
+    "sqlalchemy==2.0.35",
+    "pydantic==2.9.2",
+    "python-multipart==0.0.9",
+]
+
+[project.scripts]
+food-webapp-backend = "backend.app:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.pyright]
+include = ["backend/**", "frontend/js/**"]
+exclude = [".env*", "node_modules", "__pycache__"]

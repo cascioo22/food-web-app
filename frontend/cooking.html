@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cooking Mode - Food Webapp</title>
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        /* Cooking Mode Specific Styles */
+        .cooking-content {
+            min-height: 100vh;
+            padding-top: var(--spacing-xl);
+            padding-bottom: calc(var(--spacing-xl) - env(safe-area-inset-bottom));
+        }
+
+        .cooking-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-lg);
+            padding: 0 var(--spacing-md);
+        }
+
+        .cooking-title h1 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--color-background);
+            border: none;
+            border-radius: var(--radius-md);
+            color: var(--color-text);
+            cursor: pointer;
+        }
+
+        .back-btn:hover {
+            background: var(--color-border);
+        }
+
+        /* Ingredients Section */
+        .cooking-ingredients-section {
+            margin-bottom: var(--spacing-xl);
+            padding: 0 var(--spacing-md);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .ingredients-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .ingredient-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-xs);
+            background: var(--color-background);
+            border-radius: var(--radius-md);
+            transition: background 0.2s;
+        }
+
+        .ingredient-item:hover {
+            background: #e8e8e8;
+        }
+
+        .ingredient-checkbox {
+            width: 24px;
+            height: 24px;
+            accent-color: var(--color-success);
+        }
+
+        .ingredient-text {
+            flex: 1;
+            font-size: 1rem;
+        }
+
+        .ingredient-item.completed .ingredient-text {
+            text-decoration: line-through;
+            color: var(--color-text-muted);
+        }
+
+        /* Steps Section */
+        .cooking-steps-section {
+            margin-bottom: var(--spacing-xl);
+            padding: 0 var(--spacing-md);
+        }
+
+        .steps-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            counter-reset: step-counter;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-lg) 0;
+            border-bottom: 1px solid var(--color-border);
+            position: relative;
+            transition: opacity 0.3s, margin 0.3s;
+        }
+
+        .step-item.removed {
+            opacity: 0;
+            margin: 0 -var(--spacing-md);
+        }
+
+        .step-number-circle {
+            min-width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--color-background);
+            color: var(--color-text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+
+        .step-item.completed .step-number-circle {
+            background: var(--color-success);
+            color: white;
+        }
+
+        .step-item.completed {
+            opacity: 0.5;
+        }
+
+        .step-content {
+            flex: 1;
+            line-height: 1.6;
+        }
+
+        /* Progress Bar */
+        .cooking-progress-bar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--color-background);
+            z-index: 1001;
+        }
+
+        .cooking-progress-bar {
+            height: 100%;
+            background: var(--color-success);
+            transition: width 0.3s ease;
+        }
+
+        /* Control Bar */
+        .cooking-controls {
+            position: fixed;
+            bottom: calc(var(--spacing-xl) + env(safe-area-inset-bottom));
+            left: 0;
+            right: 0;
+            padding: var(--spacing-md);
+            background: var(--color-surface);
+            border-top: 1px solid var(--color-border);
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            z-index: 1000;
+        }
+
+        .reset-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .reset-btn:hover {
+            background: var(--color-primary-dark);
+        }
+
+        .reset-btn:focus {
+            outline: 2px solid var(--color-text);
+            outline-offset: 2px;
+        }
+
+        /* Keyboard shortcut hint */
+        .keyboard-hint {
+            position: fixed;
+            top: calc(var(--spacing-xl) + env(safe-area-inset-top));
+            right: var(--spacing-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--color-background);
+            border-radius: var(--radius-md);
+            font-size: 0.75rem;
+            color: var(--color-text-muted);
+            opacity: 0.8;
+        }
+
+        /* Desktop adjustments */
+        @media (min-width: 768px) {
+            .cooking-content {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            .keyboard-hint {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Cooking Mode Overlay -->
+    <div id="cooking-overlay" class="cooking-overlay hidden">
+        <!-- Progress Bar -->
+        <div class="cooking-progress-bar-container">
+            <div class="cooking-progress-bar" id="progress-bar"></div>
+        </div>
+
+        <!-- Header -->
+        <header class="cooking-header">
+            <button class="back-btn" id="back-btn" aria-label="Back to recipe library">
+                &larr; Back
+            </button>
+            <div class="cooking-title">
+                <h1 id="recipe-title-display">Recipe Title</h1>
+            </div>
+        </header>
+
+        <!-- Keyboard Hint -->
+        <div class="keyboard-hint" id="keyboard-hint">
+            ↑/↓ Navigate • Enter Check Step • Esc Back
+        </div>
+
+        <!-- Ingredients Section -->
+        <section class="cooking-ingredients-section">
+            <h2 class="section-title">
+                🛒 Ingredients
+            </h2>
+            <ul class="ingredients-list" id="ingredients-container"></ul>
+        </section>
+
+        <!-- Steps Section -->
+        <section class="cooking-steps-section">
+            <h2 class="section-title">
+                👨‍🍳 Instructions
+            </h2>
+            <ol class="steps-list" id="steps-container"></ol>
+        </section>
+
+        <!-- Control Bar -->
+        <footer class="cooking-controls">
+            <button class="reset-btn" id="reset-progress-btn">
+                ↺ Reset Progress
+            </button>
+        </footer>
+
+        <!-- Close Button (top right) -->
+        <button class="cooking-close" id="close-overlay-btn" aria-label="Close cooking mode">&times;</button>
+    </div>
+
+    <script src="js/cooking_mode.js"></script>
+</body>
+</html>

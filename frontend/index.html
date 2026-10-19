@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Library - Food Webapp</title>
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        /* Import URL Modal */
+        .import-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .import-modal.hidden {
+            display: none;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        /* Review/Edit Form */
+        .review-form textarea,
+        .review-form input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .review-form textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .review-form .ingredient-list,
+        .review-form .steps-list {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 4px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .review-form .ingredient-item,
+        .review-form .step-item {
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .review-form .ingredient-item:last-child,
+        .review-form .step-item:last-child {
+            border-bottom: none;
+        }
+        /* Status Messages */
+        .status-message {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .status-error {
+            background: #fee;
+            color: #c00;
+            border: 1px solid #fcc;
+        }
+        .status-warning {
+            background: #ffe;
+            color: #c90;
+            border: 1px solid #eec;
+        }
+        .status-success {
+            background: #efe;
+            color: #060;
+            border: 1px solid #cff;
+        }
+        /* Recipe Card - enhanced with edit/delete buttons */
+        .recipe-card {
+            position: relative;
+            cursor: pointer;
+        }
+        .recipe-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: none;
+            gap: 4px;
+        }
+        .recipe-card:hover .recipe-actions {
+            display: flex;
+        }
+        .recipe-actions button {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .recipe-actions button:hover {
+            background: rgba(0,0,0,0.9);
+        }
+        .btn-icon {
+            padding: 6px;
+        }
+        /* Editable fields */
+        [contenteditable]:focus {
+            outline: 2px solid #3498db;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <h1 class="sr-only">Food Webapp</h1>
+        <a href="#" class="menu-toggle" aria-label="Open menu">&#9776;</a>
+        <a href="index.html" class="logo-link">🍎 Recipes</a>
+    </header>
+
+    <!-- Import Recipe Modal -->
+    <div id="import-modal" class="import-modal hidden">
+        <div class="modal-card">
+            <h3>Import or Create Recipe</h3>
+            
+            <div id="import-status" class="status-message hidden"></div>
+
+            <!-- URL Import Form -->
+            <form id="url-import-form" class="review-form">
+                <div class="form-group">
+                    <label for="import-url">Recipe URL:</label>
+                    <input type="text" id="import-url" name="url" placeholder="Paste recipe URL..." required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Import from URL</button>
+            </form>
+
+            <!-- Manual Entry Form -->
+            <form id="manual-entry-form" class="review-form hidden">
+                <h4>Manual Entry</h4>
+                
+                <div class="form-group">
+                    <label for="manual-title">Recipe Title:</label>
+                    <input type="text" id="manual-title" name="title" required placeholder="Enter recipe title">
+                </div>
+
+                <div class="form-group">
+                    <label for="manual-prep">Prep Time (optional):</label>
+                    <input type="text" id="manual-prep" name="prep_time" placeholder="e.g., 30 min">
+                </div>
+
+                <div class="form-group">
+                    <label for="manual-servings">Servings (optional):</label>
+                    <input type="text" id="manual-servings" name="servings" placeholder="e.g., 4 servings">
+                </div>
+
+                <div class="form-group">
+                    <label for="manual-category">Category (optional):</label>
+                    <input type="text" id="manual-category" name="category" placeholder="e.g., breakfast, dinner">
+                </div>
+
+                <div class="form-group">
+                    <label for="manual-ingredients">Ingredients (one per line):</label>
+                    <textarea id="manual-ingredients" name="ingredients_text" required placeholder="1 cup flour&#10;2 eggs&#10;3 tbsp sugar"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="manual-steps">Steps (one per line):</label>
+                    <textarea id="manual-steps" name="steps_text" required placeholder="Mix dry ingredients&#10;Add wet ingredients&#10;Bake at 350°F"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save Recipe</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recipe Detail Modal -->
+    <div id="recipe-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-backdrop"></div>
+        <article id="recipe-detail" class="modal-content">
+            <header class="detail-header">
+                <h2 id="modal-title" contenteditable="false">Recipe Title</h2>
+                <button id="close-modal" aria-label="Close recipe details">&times;</button>
+                <!-- Edit/Delete Actions -->
+                <div class="recipe-actions detail-actions">
+                    <button id="add-photo-btn" aria-label="Add a photo for this recipe" style="color:#3498db;">📷 Add Photo</button>
+                    <button id="edit-recipe-btn" aria-label="Edit recipe">&#9998;</button>
+                    <button id="delete-recipe-btn" aria-label="Delete recipe" style="color: #c00;">&times;</button>
+                </div>
+            </header>
+
+<!-- Upload Photo Modal -->
+<div id="upload-modal" class="import-modal hidden">
+    <div class="modal-card review-form">
+        <h3>Add Photo to Recipe</h3>
+        <div id="upload-status" class="status-message hidden"></div>
+        
+        <form id="upload-photo-form">
+            <input type="hidden" id="upload-recipe-id">
+            
+            <div class="form-group">
+                <label for="photo-file">Select Photo:</label>
+                <input type="file" id="photo-file" accept="image/*">
+            </div>
+            
+            <div class="form-group">
+                <label for="photo-caption">Caption (optional):</label>
+                <input type="text" id="photo-caption" placeholder="e.g., Fresh salad with homemade dressing">
+            </div>
+            
+            <div style="display:flex;gap:8px;">
+                <button type="submit" class="btn btn-primary">Upload Photo</button>
+                <button type="button" id="cancel-upload" class="btn btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+            <!-- Photo Gallery Section -->
+            <section id="photo-gallery" class="gallery">
+                <h3 id="gallery-title" class="recipe-gallery-title">Photos</h3>
+                <div id="gallery-grid" class="photo-grid"></div>
+                <div id="gallery-empty" class="empty-state hidden" style="padding:40px 20px;">
+                    <span aria-hidden="true">📷</span>
+                    <p>No photos for this recipe yet</p>
+                </div>
+                <div id="gallery-loading" class="loading-state" style="display:none;">
+                    <svg class="spinner" viewBox="0 0 50 50">
+                        <circle cx="25" cy="25" r="20" fill="none" stroke="#3498db" stroke-width="4"/>
+                    </svg>
+                    <p>Loading photos...</p>
+                </div>
+            </section>
+
+            <!-- Recipe Metadata -->
+            <aside class="detail-meta">
+                <div class="meta-item">
+                    <span class="label">Time</span>
+                    <time datetime=""></time>
+                </div>
+                <div class="meta-item">
+                    <span class="label">Servings</span>
+                    <span></span>
+                </div>
+                <div class="meta-item">
+                    <span class="label">Category</span>
+                    <span></span>
+                </div>
+            </aside>
+
+            <!-- Ingredients -->
+            <section class="ingredients" aria-label="Ingredients">
+                <h3>Ingredients</h3>
+                <ul id="ingredients-list"></ul>
+                <button id="mark-all-checked" class="btn btn-secondary hidden">Mark All Checked</button>
+            </section>
+
+            <!-- Instructions -->
+            <section class="instructions" aria-label="Instructions">
+                <h3>Instructions</h3>
+                <ol id="steps-list"></ol>
+                <div class="progress-summary">
+                    <span id="step-progress">0/0 steps</span>
+                </div>
+            </section>
+
+            <!-- Nutrition Section -->
+            <section id="nutrition-section" class="nutrition hidden" aria-label="Nutrition Information">
+                <h3>Nutrition Info</h3>
+                <div id="nutrition-content" style="padding: 8px 0; font-size: 14px;">
+                    <!-- Nutrition data will be populated here -->
+                </div>
+                <button id="edit-nutrition-btn" class="btn btn-secondary hidden" style="margin-top: 8px; padding: 6px 12px; font-size: 13px;">✏️ Edit Nutrition</button>
+            </section>
+
+            <!-- Source Attribution -->
+            <section id="source-attribution" class="source-attribution hidden">
+                <small><strong>Source:</strong> <a href="#" target="_blank" id="source-url">URL</a></small>
+            </section>
+
+            <!-- Edit Nutrition Modal -->
+            <div id="nutrition-edit-modal" class="import-modal hidden">
+                <div class="modal-card review-form">
+                    <h3>Edit Nutrition</h3>
+                    <div id="nutrition-edit-status" class="status-message hidden"></div>
+                    
+                    <input type="hidden" id="edit-nutrition-recipe-id">
+                    
+                    <!-- Serving Size -->
+                    <div class="form-group">
+                        <label for="edit-servings-size">Serving Size:</label>
+                        <input type="text" id="edit-servings-size" placeholder="e.g., 1 cup (240ml)">
+                    </div>
+
+                    <!-- Per-serving values -->
+                    <details style="margin: 8px 0; font-size: 13px;">
+                        <summary style="cursor: pointer; color: var(--color-secondary);">Per Serving Values</summary>
+                        <div style="padding: 8px 0;">
+                            <div class="form-group">
+                                <label for="edit-calories-serv">Calories:</label>
+                                <input type="number" id="edit-calories-serv" min="0" step="1" placeholder="Enter calories">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <div class="form-group">
+                                    <label for="edit-protein-serv">Protein (g):</label>
+                                    <input type="number" id="edit-protein-serv" min="0" step="0.5" placeholder="g">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-carbs-serv">Carbs (g):</label>
+                                    <input type="number" id="edit-carbs-serv" min="0" step="1" placeholder="g">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-fat-serv">Fat (g):</label>
+                                    <input type="number" id="edit-fat-serv" min="0" step="0.5" placeholder="g">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-fiber-serv">Fiber (g):</label>
+                                    <input type="number" id="edit-fiber-serv" min="0" step="1" placeholder="g">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-sugar-serv">Sugar (g):</label>
+                                    <input type="number" id="edit-sugar-serv" min="0" step="1" placeholder="g">
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit-sodium-serv">Sodium (mg):</label>
+                                    <input type="number" id="edit-sodium-serv" min="0" step="10" placeholder="mg">
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- Total recipe values -->
+                    <details style="margin: 8px 0; font-size: 13px;">
+                        <summary style="cursor: pointer; color: var(--color-secondary);">Total Recipe Values (Optional)</summary>
+                        <div style="padding: 8px 0;">
+                            <div class="form-group">
+                                <label for="edit-calories-total">Total Calories:</label>
+                                <input type="number" id="edit-calories-total" min="0" step="1" placeholder="Total calories">
+                            </div>
+                        </div>
+                    </details>
+
+                    <div style="display: flex; gap: 8px; margin-top: 12px;">
+                        <button type="button" id="cancel-edit-nutrition" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" id="save-nutrition-changes" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <footer class="detail-actions">
+                <button id="add-to-list" class="btn btn-primary" onclick="addToGroceryList()">Add to Grocery List</button>
+                <button id="select-ingredients-btn" class="btn btn-secondary" onclick="showSelectIngredientsModal()">Select Ingredients...</button>
+                <button id="start-cooking-btn" class="btn btn-primary" style="background: var(--color-success);">Start Cooking 🍳</button>
+                <button id="edit-recipe-btn-footer" class="btn btn-secondary">&#9998; Edit</button>
+            </footer>
+        </article>
+    </div>
+
+    <!-- Editing Modal -->
+    <div id="edit-modal" class="import-modal hidden">
+        <div class="modal-card review-form">
+            <h3>Edit Recipe</h3>
+            
+            <div id="edit-status" class="status-message hidden"></div>
+
+            <form id="edit-recipe-form">
+                <input type="hidden" id="edit-recipe-id">
+                
+                <div class="form-group">
+                    <label for="edit-title">Title:</label>
+                    <input type="text" id="edit-title" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-prep">Prep Time:</label>
+                    <input type="text" id="edit-prep">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-servings">Servings:</label>
+                    <input type="text" id="edit-servings">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-category">Category:</label>
+                    <input type="text" id="edit-category">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-ingredients">Ingredients (one per line):</label>
+                    <textarea id="edit-ingredients" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-steps">Steps (one per line):</label>
+                    <textarea id="edit-steps" required></textarea>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" id="cancel-edit" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recipe Grid -->
+    <main id="recipe-grid" class="grid" aria-label="Recipe library">
+        <div class="loading-state">
+            <svg class="spinner" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="20" fill="none" stroke="#3498db" stroke-width="4"/>
+            </svg>
+            <p>Loading recipes...</p>
+        </div>
+    </main>
+
+    <!-- Empty State -->
+    <section class="empty-state hidden">
+        <span aria-hidden="true">&#127956;</span>
+        <h2>No recipes found</h2>
+        <p>Add your first recipe to get started!</p>
+        <button id="add-recipe-btn" class="btn btn-primary">Add Recipe</button>
+    </section>
+
+    <!-- Error State -->
+    <section class="error-state hidden" aria-live="polite">
+        <span aria-hidden="true">&#9888;</span>
+        <h2>Error loading recipes</h2>
+        <p>Please try again later.</p>
+        <button id="retry-recipes-btn" class="btn btn-primary">Retry</button>
+    </section>
+
+    <footer class="app-footer">
+        <nav aria-label="Bottom navigation">
+            <a href="index.html" class="nav-item active">Recipes</a>
+            <a href="lists.html" class="nav-item">Lists</a>
+            <a href="photos.html" class="nav-item">Photos</a>
+        </nav>
+    </footer>
+
+    <script src="js/recipe_library.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.5, pytest-9.1.1, pluggy-1.7.0 -- /opt/data/home/food-webapp-project/.venv/bin/python
+cachedir: .pytest_cache_old
+rootdir: /opt/data/home/food-webapp-project/tests
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collecting ... collected 13 items
+
+tests/test_backend.py::test_root PASSED                                  [  7%]
+tests/test_backend.py::test_list_recipes_empty PASSED                    [ 15%]
+tests/test_backend.py::test_create_recipe PASSED                         [ 23%]
+tests/test_backend.py::test_get_recipe PASSED                            [ 30%]
+tests/test_backend.py::test_get_recipe_not_found PASSED                  [ 38%]
+tests/test_backend.py::test_delete_recipe PASSED                         [ 46%]
+tests/test_backend.py::test_create_grocery_list PASSED                   [ 53%]
+tests/test_backend.py::test_list_grocery_lists PASSED                    [ 61%]
+tests/test_backend.py::test_update_grocery_list PASSED                   [ 69%]
+tests/test_backend.py::test_create_photo PASSED                          [ 76%]
+tests/test_backend.py::test_add_ingredients_to_recipe PASSED             [ 84%]
+tests/test_backend.py::test_get_ingredients PASSED                       [ 92%]
+tests/test_backend.py::test_database_models PASSED                       [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/starlette/testclient.py:40
+  /opt/data/home/food-webapp-project/.venv/lib/python3.13/site-packages/starlette/testclient.py:40: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+test_backend.py: 10 warnings
+  /opt/data/home/food-webapp-project/.venv/lib/python3.13/site-packages/sqlalchemy/sql/schema.py:3596: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+test_backend.py::test_delete_recipe
+  /opt/data/home/food-webapp-project/tests/test_backend.py:67: SAWarning: DELETE statement on table 'recipes' expected to delete 1 row(s); 0 were matched.  Please set confirm_deleted_rows=False within the mapper configuration to prevent this warning.
+    session.commit()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 13 passed, 12 warnings in 2.53s ========================

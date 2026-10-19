@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Responsive Test — Recipe Grid</title>
+    <link rel="stylesheet" href="../frontend/css/main.css">
+    <style>
+        .test-results { margin: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <header class="mobile-header">
+        <h1 class="sr-only">Food Webapp</h1>
+        <a href="../frontend/index.html" class="logo-link">🍎 Recipes</a>
+    </header>
+
+    <section class="search-section">
+        <input type="text" name="q" placeholder="Search recipes..." style="padding:8px; border:1px solid #ddd; border-radius:8px;">
+        <select id="category-filter" aria-label="Filter by category" style="flex:1; min-width:120px; padding:8px; border:1px solid #ddd; border-radius:8px;">
+            <option value="">All Categories</option>
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+        </select>
+    </section>
+
+    <main id="recipe-grid" class="grid" aria-label="Recipe library">
+        <!-- Recipe cards injected dynamically -->
+    </main>
+
+    <footer class="app-footer">
+        <nav aria-label="Bottom navigation">
+            <a href="../frontend/index.html" class="nav-item active">Recipes</a>
+            <a href="../frontend/lists.html" class="nav-item">Lists</a>
+            <a href="../frontend/photos.html" class="nav-item">Photos</a>
+        </nav>
+    </footer>
+
+    <script>
+        // Mock recipes for testing
+        const mockRecipes = [
+            { id: '1', title: 'Classic Pancakes', category: 'breakfast', prepTime: '10 min' },
+            { id: '2', title: 'Avocado Toast', category: 'breakfast', prepTime: '5 min' },
+            { id: '3', title: 'Grilled Chicken Salad', category: 'lunch', prepTime: '15 min' },
+            { id: '4', title: 'Pasta Primavera', category: 'dinner', prepTime: '20 min' },
+            { id: '5', title: 'Beef Stir-Fry', category: 'dinner', prepTime: '25 min' },
+            { id: '6', title: 'Chocolate Cake', category: 'dessert', prepTime: '60 min' },
+            { id: '7', title: 'Oatmeal', category: 'breakfast', prepTime: '5 min' },
+            { id: '8', title: 'Sandwich Platter', category: 'lunch', prepTime: '10 min' }
+        ];
+
+        const grid = document.getElementById('recipe-grid');
+
+        // Render recipes
+        function renderRecipes() {
+            grid.innerHTML = mockRecipes.map(recipe => `
+                <article class="recipe-card">
+                    <div class="recipe-image-wrapper" style="padding-top:75%;">
+                        <div style="height:100%;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;">📷</div>
+                    </div>
+                    <div class="recipe-content">
+                        <h3 class="recipe-title">${escapeHtml(recipe.title)}</h3>
+                        <div class="recipe-meta">
+                            <span class="recipe-category">${capitalizeFirst(escapeHtml(recipe.category))}</span>
+                            <span>⏱️ ${escapeHtml(recipe.prepTime)}</span>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+
+            // Run responsive test
+            runTest();
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Capitalize first letter
+        function capitalizeFirst(str) {
+            if (!str) return '';
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        // Get computed grid columns
+        function getGridColumns() {
+            const grid = document.getElementById('recipe-grid');
+            const computed = getComputedStyle(grid);
+            return computed.gridTemplateColumns;
+        }
+
+        // Run responsive test
+        function runTest() {
+            const width = window.innerWidth;
+            const columns = getGridColumns();
+            let passed = true;
+            let resultText = '';
+
+            if (width < 600) {
+                resultText = columns.includes('2') ? '✅ PASS: Mobile (2 cols)' : `❌ FAIL: Expected 2 cols, got "${columns}"`;
+                passed = columns.includes('2');
+            } else if (width >= 600 && width < 900) {
+                resultText = columns.includes('3') ? '✅ PASS: Tablet (3 cols)' : `❌ FAIL: Expected 3 cols, got "${columns}"`;
+                passed = columns.includes('3');
+            } else if (width >= 900) {
+                resultText = columns.includes('4') ? '✅ PASS: Desktop (4 cols)' : `❌ FAIL: Expected 4 cols, got "${columns}"`;
+                passed = columns.includes('4');
+            }
+
+            // Display results in DOM
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test-results';
+            testDiv.innerHTML = `
+                <h2>📱 Responsive Test Result</h2>
+                <p><strong>Viewport:</strong> ${width}x${window.innerHeight}px</p>
+                <p><strong>Grid Columns:</strong> ${columns}</p>
+                <p class="${passed ? 'pass' : 'fail'}">${resultText}</p>
+                <p style="margin-top:10px;font-size:0.9rem;color:#666;">
+                    💡 Test at different sizes:<br>
+                    • Mobile: &lt;600px (should be 2 cols)<br>
+                    • Tablet: 600-899px (should be 3 cols)<br>
+                    • Desktop: ≥900px (should be 4 cols)
+                </p>
+            `;
+
+            // Insert after search section
+            const searchSection = document.querySelector('.search-section');
+            if (searchSection) {
+                searchSection.parentNode.insertBefore(testDiv, searchSection.nextSibling);
+            }
+
+            return passed;
+        }
+
+        // Run test on load and resize
+        window.addEventListener('load', renderRecipes);
+        window.addEventListener('resize', () => {
+            const grid = document.getElementById('recipe-grid');
+            if (grid && grid.innerHTML === '') {
+                renderRecipes();
+            } else if (grid) {
+                runTest();
+            }
+        });
+
+        // Run initial test
+        renderRecipes();
+    </script>
+</body>
+</html>

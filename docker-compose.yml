@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./foodweb.db
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - backend_data:/app/data
+      - /opt/data/home/food-webapp-project/uploads:/app/uploads:ro
+    restart: unless-stopped
+
+  # Frontend static files service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+    driver: local
