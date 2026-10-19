@@ -23,12 +23,15 @@
         // Modal toggles
         const importModal = document.getElementById('import-modal');
         if (importModal) {
+            // Add modal-backdrop class to make it clickable
+            importModal.classList.add('modal-backdrop');
+            
             document.getElementById('add-recipe-btn').addEventListener('click', () => {
                 importModal.classList.remove('hidden');
                 showStatus(importModal, '', 'success');
             });
-            
-            importModal.querySelector('.modal-backdrop').addEventListener('click', () => {
+
+            importModal.addEventListener('click', () => {
                 importModal.classList.add('hidden');
                 document.body.style.overflow = '';
             });
@@ -37,7 +40,12 @@
         // Recipe modal toggles
         const recipeModal = document.getElementById('recipe-modal');
         if (recipeModal) {
-            recipeModal.querySelector('.modal-backdrop').addEventListener('click', () => {
+            // Ensure modal-backdrop class exists
+            if (!recipeModal.classList.contains('modal-backdrop')) {
+                recipeModal.classList.add('modal-backdrop');
+            }
+
+            recipeModal.addEventListener('click', () => {
                 recipeModal.classList.add('hidden');
                 document.body.style.overflow = '';
             });
@@ -51,7 +59,12 @@
         // Edit modal
         const editModal = document.getElementById('edit-modal');
         if (editModal) {
-            editModal.querySelector('.modal-backdrop').addEventListener('click', () => {
+            // Ensure modal-backdrop class exists
+            if (!editModal.classList.contains('modal-backdrop')) {
+                editModal.classList.add('modal-backdrop');
+            }
+
+            editModal.addEventListener('click', () => {
                 editModal.classList.add('hidden');
                 document.body.style.overflow = '';
             });
