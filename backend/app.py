@@ -594,6 +594,7 @@ def get_photo(filename: str):
 @app.get("/recipes", response_model=list[RecipeResponse])
 def get_recipes():
     """Get all recipes."""
+    print("=== DEBUG: /recipes endpoint called ===")  # Debug output
     with SessionLocal() as db:
         # Include nutrition if it exists
         recipes = []
