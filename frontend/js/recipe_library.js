@@ -4,7 +4,7 @@
  */
 
 (function() {
-    const API_BASE = 'http://127.0.0.1:8000'; // Local FastAPI server
+    const API_BASE = '/api';; // Local FastAPI server
     
     let recipes = [];
     let currentRecipeId = null;

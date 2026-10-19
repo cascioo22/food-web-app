@@ -46,8 +46,8 @@ class Recipe(Base):
     source = Column(String(100), default="manual")  # "import", "manual"
     original_url = Column(String(1024), nullable=True)
     instructions_ordered = Column(Boolean, default=False)
-    created_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 class Nutrition(Base):
     """Nutrition information model - separate table for flexibility."""
@@ -75,8 +75,8 @@ class Nutrition(Base):
     sugar_total = Column(Float, default=None)
     sodium_total = Column(Float, default=None)
     
-    created_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Photo(Base):
@@ -92,7 +92,7 @@ class Photo(Base):
     format = Column(String(20), default="jpeg")
     width = Column(Integer, default=0)
     height = Column(Integer, default=0)
-    created_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
 
 def get_db():
@@ -398,6 +398,16 @@ def get_db_context():
 
 # Application setup
 app = FastAPI(title="Food Webapp API", version="1.0.0")
+
+# Add CORS middleware for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.on_event("startup")
 def startup():
