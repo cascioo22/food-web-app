@@ -354,11 +354,11 @@
                     <button aria-label="Delete recipe">&times;</button>
                 </div>
                 <div class="recipe-image-wrapper">
-                    ${recipe.image_url ? `<img src="${escapeHtml(recipe.image_url)}" alt="${escapeHtml(recipe.title)}">` : ''}
+                    ${recipe.image_url ? `<img src="${escapeHtml(recipe.image_url)}" alt="${escapeHtml(recipe.name)}">` : ''}
                     ${!recipe.image_url ? `<div style="height:120px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;">📷</div>` : ''}
                 </div>
                 <div class="recipe-content">
-                    <h3 class="recipe-title">${escapeHtml(recipe.title)}</h3>
+                    <h3 class="recipe-title">${escapeHtml(recipe.name || recipe.name)}</h3>
                     <div class="recipe-meta">
                         ${recipe.prep_time ? `<span>&#8987; ${escapeHtml(recipe.prep_time)}</span>` : ''}
                         ${recipe.servings ? `<span>&#128101; ${escapeHtml(recipe.servings)}</span>` : ''}
@@ -444,10 +444,10 @@
             if (result.success) {
                 // Save the imported recipe
                 const saveData = {
-                    title: result.title || 'Untitled Recipe',
-                    prep_time: result.prep_time || '',
-                    servings: result.servings || '',
-                    category: result.category || '',
+                    title: result.name || result.title || 'Untitled Recipe',
+                    prep_time: '',
+                    servings: '',
+                    category: '',
                     original_url: url,
                     ingredients_text: result.ingredients ? formatIngredients(result.ingredients) : '',
                     steps_ordered: formatSteps(result.steps)
@@ -543,9 +543,9 @@
         }
 
         // Populate modal content
-        document.getElementById('modal-title').textContent = recipe.title;
+        document.getElementById('modal-title').textContent = recipe.name || 'Recipe';
         document.getElementById('recipe-image').src = recipe.image_url || '';
-        document.getElementById('recipe-image').alt = recipe.title;
+        document.getElementById('recipe-image').alt = recipe.name || '';
         
         if (recipe.prep_time) document.querySelector('.detail-meta .meta-item:nth-child(1) span').textContent = escapeHtml(recipe.prep_time);
         if (recipe.servings) document.querySelector('.detail-meta .meta-item:nth-child(2) span').textContent = escapeHtml(recipe.servings);
@@ -600,9 +600,9 @@
         }
 
         document.getElementById('edit-recipe-id').value = recipe.id;
-        document.getElementById('edit-title').value = recipe.title || '';
-        document.getElementById('edit-prep').value = recipe.prep_time || '';
-        document.getElementById('edit-servings').value = recipe.servings || '';
+        document.getElementById('edit-title').value = recipe.name || '';
+        document.getElementById('edit-prep').value = '';
+        document.getElementById('edit-servings').value = '';
         document.getElementById('edit-category').value = recipe.category || '';
         document.getElementById('edit-ingredients').value = recipe.ingredients_text || '';
         document.getElementById('edit-steps').value = recipe.steps_ordered || '';
@@ -771,7 +771,7 @@
                 // Update gallery title with recipe name
                 const recipe = recipes.find(r => r.id === currentRecipeId);
                 if (recipe) {
-                    galleryTitle.textContent = `${recipe.title} — Photos`;
+                    galleryTitle.textContent = `${recipe.name} — Photos`;
                 } else {
                     galleryTitle.textContent = 'Photos';
                 }
