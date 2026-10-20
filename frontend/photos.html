@@ -29,8 +29,10 @@
             <p>Loading photos...</p>
         </div>
 
+    </main>
+
         <!-- Empty State -->
-        <section class="empty-state hidden">
+        <section id="gallery-empty" class="empty-state hidden">
             <span aria-hidden="true">📷</span>
             <h2>No photos yet</h2>
             <p>Capture your finished dishes to inspire others!</p>
@@ -38,13 +40,12 @@
         </section>
 
         <!-- Error State -->
-        <section class="error-state hidden" aria-live="polite">
+        <section id="gallery-error" class="error-state hidden" aria-live="polite">
             <span aria-hidden="true">⚠️</span>
             <h2>Error loading photos</h2>
             <p>Please try again later.</p>
             <button id="retry-gallery-btn" class="btn btn-primary">Retry</button>
         </section>
-    </main>
 
     <!-- Photo Modal -->
     <div id="photo-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="photo-modal-title">
@@ -63,6 +64,8 @@
                 </p>
             </section>
 
+            <div class="photo-link-control"><label for="photo-recipe-select">Recipe</label> <select id="photo-recipe-select"><option value="">No recipe</option></select></div>
+
             <!-- Caption & Linking Controls -->
             <footer class="detail-actions">
                 <div style="flex:1;margin-right:8px;">
@@ -75,6 +78,8 @@
             </footer>
         </article>
     </div>
+
+<footer class="app-footer"><nav aria-label="Bottom navigation"><a href="index.html" class="nav-item">Recipes</a><a href="lists.html" class="nav-item">Lists</a><a href="photos.html" class="nav-item active" aria-current="page">Photos</a></nav></footer>
 
     <!-- Script -->
     <script src="js/photos.js"></script>

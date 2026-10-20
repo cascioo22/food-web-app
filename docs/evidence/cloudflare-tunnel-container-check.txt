@@ -1,0 +1,6 @@
+Container food-web-app-backend-1 Running
+ Container food-web-app-frontend-1 Running
+ Container food-web-app-cloudflared-1 Creating
+ Container food-web-app-cloudflared-1 Created
+State=created ReadOnly=true User=65532:65532 Ports={}
+Compose-network origin check: 200 {'status': 'healthy', 'database': 'connected'}

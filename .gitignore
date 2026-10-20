@@ -8,14 +8,36 @@ __pycache__/
 env/
 ENV/
 
-# Environment variables
+# Environment variables and local credentials (never commit live secrets)
 .env
+.env.*
+!.env.example
+.env-tunnel-*
+.secrets/
+credentials.json
+*.token
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local runtime data; previously tracked test-image fixtures remain tracked
+uploads/
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3-wal
+*.sqlite3-shm
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Local browser test dependencies and historical scratch backup
+.qa/
+frontend/js/recipe_library_backup.js
 
 # Testing
 .pytest_cache/

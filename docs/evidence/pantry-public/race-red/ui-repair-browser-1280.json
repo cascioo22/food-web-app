@@ -1,0 +1,12 @@
+{
+  "base": "https://pantry.casciottiprojects.com",
+  "checks": [
+    "visible recipe creation control",
+    "input clicks do not close import",
+    "manual recipe persists via UI",
+    "detail renders both ingredients and steps",
+    "ingredient picker syncs detail selection",
+    "edit updates persisted title"
+  ],
+  "errors": []
+}

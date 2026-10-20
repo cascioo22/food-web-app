@@ -360,7 +360,7 @@ def upload_photo(
             
             # Store metadata in database
             db = next(get_db())
-            from app_new import Photo as PhotoModel
+            # Use Photo directly (no circular import)
             photo_record = Photo(
                 recipe_id=recipe_id,
                 filename=photo_filename,
@@ -400,8 +400,8 @@ def delete_photo_endpoint(filename: str):
         # Delete database record (if implemented)
         db = next(get_db())
         try:
-            from app_new import Photo as PhotoModel
-            to_delete = db.query(PhotoModel).filter_by(filename=filename).first()
+            # Use Photo directly (no circular import)
+            to_delete = db.query(Photo).filter_by(filename=filename).first()
             if to_delete:
                 db.delete(to_delete)
                 db.commit()
@@ -418,7 +418,7 @@ def list_photos(recipe_id: Optional[int] = None, limit: int = 100):
     """List photos, optionally filtered by recipe."""
     db = next(get_db())
     
-    query = db.query(PhotoModel)
+    query = db.query(Photo)
     if recipe_id:
         query = query.filter_by(recipe_id=recipe_id)
     

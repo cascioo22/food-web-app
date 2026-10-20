@@ -1,0 +1,61 @@
+PASS visible recipe creation control
+PASS input clicks do not close import
+PASS live URL import populates review fields
+PASS manual recipe persists via UI
+PASS detail renders both ingredients and steps
+PASS ingredient picker syncs detail selection
+PASS edit updates persisted title
+PASS nutrition save persists
+PASS list item completion survives reload
+PASS item edit persisted
+PASS bulk ingredient add persists
+PASS closing child dialog retains recipe
+PASS recipe photo upload and linking persist
+PASS recipe layout contains viewport at 375
+PASS recipe layout contains viewport at 600
+PASS recipe layout contains viewport at 768
+PASS recipe layout contains viewport at 900
+PASS recipe layout contains viewport at 1280
+PASS cooking retains original steps
+PASS cooking progress survives reload
+PASS cooking reset works
+PASS photo caption editing persists
+PASS photo unlink persists
+PASS photo delete persists
+PASS list rename persists
+PASS item deletion persists
+PASS list deletion persists
+PASS load failure displays retry
+PASS retry recovers real recipe data
+PASS recipe deletion persists
+PASS no uncaught browser errors
+PASS visible recipe creation control
+PASS input clicks do not close import
+PASS manual recipe persists via UI
+PASS detail renders both ingredients and steps
+PASS ingredient picker syncs detail selection
+PASS edit updates persisted title
+PASS nutrition save persists
+PASS list item completion survives reload
+PASS item edit persisted
+PASS bulk ingredient add persists
+PASS closing child dialog retains recipe
+PASS recipe photo upload and linking persist
+PASS recipe layout contains viewport at 375
+PASS recipe layout contains viewport at 600
+PASS recipe layout contains viewport at 768
+PASS recipe layout contains viewport at 900
+PASS recipe layout contains viewport at 1280
+PASS cooking retains original steps
+PASS cooking progress survives reload
+PASS cooking reset works
+PASS photo caption editing persists
+PASS photo unlink persists
+PASS photo delete persists
+PASS list rename persists
+PASS item deletion persists
+PASS list deletion persists
+PASS load failure displays retry
+PASS retry recovers real recipe data
+PASS recipe deletion persists
+PASS no uncaught browser errors

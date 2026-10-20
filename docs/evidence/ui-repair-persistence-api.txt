@@ -1,0 +1,22 @@
+Created recipe, grocery item, linked photo for recreation check.
+ Container food-web-app-backend-1 Recreate 
+ Container food-web-app-backend-1 Recreated 
+ Container food-web-app-frontend-1 Recreate 
+ Container food-web-app-frontend-1 Recreated 
+ Container food-web-app-backend-1 Starting 
+ Container food-web-app-backend-1 Started 
+ Container food-web-app-frontend-1 Starting 
+ Container food-web-app-frontend-1 Started 
+PASS recipe, grocery item, linked photo metadata and image bytes survived container recreation.
+test_bulk_add_writes_selected_items_and_deduplicates (test_ui_repair_api.BulkRepairTests.test_bulk_add_writes_selected_items_and_deduplicates) ... ok
+test_list_and_item_crud_persist (test_ui_repair_api.GroceryRepairTests.test_list_and_item_crud_persist) ... ok
+test_private_url_rejected_without_saving (test_ui_repair_api.ImportRepairTests.test_private_url_rejected_without_saving) ... ok
+test_clear_optional_value_and_recipe_deletion_cleanup (test_ui_repair_api.NutritionRepairTests.test_clear_optional_value_and_recipe_deletion_cleanup) ... ok
+test_negative_update_rejected (test_ui_repair_api.NutritionRepairTests.test_negative_update_rejected) ... ok
+test_photo_upload_image_caption_link_and_delete (test_ui_repair_api.PhotoRepairTests.test_photo_upload_image_caption_link_and_delete) ... ok
+test_manual_recipe_round_trip (test_ui_repair_api.RecipeRepairTests.test_manual_recipe_round_trip) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 1.108s
+
+OK

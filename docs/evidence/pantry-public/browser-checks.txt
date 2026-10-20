@@ -1,0 +1,47 @@
+PASS visible recipe creation control
+PASS input clicks do not close import
+PASS manual recipe persists via UI
+PASS detail renders both ingredients and steps
+PASS ingredient picker syncs detail selection
+PASS edit updates persisted title
+PASS nutrition save persists
+locator.fill: Timeout 8000ms exceeded.
+Call log:
+  - waiting for locator('#list-name-input')
+    - locator resolved to <input type="text" id="list-name-input" placeholder="List name (e.g., Weekly Shopping)"/>
+    - fill("UI QA 1792461746300")
+  - attempting fill action
+    2 × waiting for element to be visible, enabled and editable
+      - element is not visible
+    - retrying fill action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and editable
+      - element is not visible
+    - retrying fill action
+      - waiting 100ms
+    16 × waiting for element to be visible, enabled and editable
+       - element is not visible
+     - retrying fill action
+       - waiting 500ms
+
+    at /opt/data/home/food-webapp-project/tests/ui_repair_browser.cjs:73:44 {
+  log: [
+    "  - waiting for locator('#list-name-input')",
+    '    - locator resolved to <input type="text" id="list-name-input" placeholder="List name (e.g., Weekly Shopping)"/>',
+    '    - fill("UI QA 1792461746300")',
+    '  - attempting fill action',
+    '    2 × waiting for element to be visible, enabled and editable',
+    '      - element is not visible',
+    '    - retrying fill action',
+    '    - waiting 20ms',
+    '    2 × waiting for element to be visible, enabled and editable',
+    '      - element is not visible',
+    '    - retrying fill action',
+    '      - waiting 100ms',
+    '    16 × waiting for element to be visible, enabled and editable',
+    '       - element is not visible',
+    '     - retrying fill action',
+    '       - waiting 500ms'
+  ],
+  name: 'TimeoutError'
+}

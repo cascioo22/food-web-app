@@ -1,0 +1,70 @@
+time="2026-10-20T01:18:33Z" level=warning msg="buildx Docker CLI plugin not found: falling back to the classic builder. BuildKit-only build features (multi-arch, secrets, ssh, additional contexts, ...) will not be available"
+ Image food-web-app-backend Building 
+ Image food-web-app-backend Building 
+Sending build context to Docker daemon  28.53kB
+Step 1/8 : FROM python:3.11-slim
+ ---> e88e9763f943
+Step 2/8 : WORKDIR /app
+ ---> Using cache
+ ---> e1d8eae0c586
+Step 3/8 : COPY requirements.txt .
+ ---> Using cache
+ ---> 25904f3ebf00
+Step 4/8 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Using cache
+ ---> abddbe1b2944
+Step 5/8 : COPY . .
+ ---> 0145d5d180c1
+Step 6/8 : EXPOSE 8000
+ ---> Running in 90f816902fb7
+ ---> Removed intermediate container 90f816902fb7
+ ---> 7582d1d9d109
+Step 7/8 : CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+ ---> Running in 69be8f879823
+ ---> Removed intermediate container 69be8f879823
+ ---> 60c1135dc890
+Step 8/8 : LABEL com.docker.compose.image.builder=classic
+ ---> Running in d33c75ba34ab
+ ---> Removed intermediate container d33c75ba34ab
+ ---> c5082c54862e
+Successfully built c5082c54862e
+Successfully tagged food-web-app-backend:latest
+ Image food-web-app-backend Built 
+ Image food-web-app-backend Built 
+ Image food-web-app-frontend Building 
+ Image food-web-app-frontend Building 
+Sending build context to Docker daemon  29.95kB
+Step 1/6 : FROM nginx:alpine
+ ---> db35bfc6b295
+Step 2/6 : COPY default.conf /etc/nginx/conf.d/default.conf
+ ---> Using cache
+ ---> 74af1f9fd1ab
+Step 3/6 : COPY . /usr/share/nginx/html
+ ---> ca12df0626a5
+Step 4/6 : EXPOSE 80
+ ---> Running in e25bbedd7987
+ ---> Removed intermediate container e25bbedd7987
+ ---> 2cff84ba94dd
+Step 5/6 : CMD ["nginx", "-g", "daemon off;"]
+ ---> Running in 93a4e02e37e0
+ ---> Removed intermediate container 93a4e02e37e0
+ ---> 9e0ee567e758
+Step 6/6 : LABEL com.docker.compose.image.builder=classic
+ ---> Running in 31c82efb3bd3
+ ---> Removed intermediate container 31c82efb3bd3
+ ---> 3be9aa49bafd
+Successfully built 3be9aa49bafd
+Successfully tagged food-web-app-frontend:latest
+ Image food-web-app-frontend Built 
+ Image food-web-app-frontend Built 
+ Container food-web-app-backend-1 Recreate 
+ Container food-web-app-backend-1 Recreated 
+ Container food-web-app-frontend-1 Recreate 
+ Container food-web-app-frontend-1 Recreated 
+ Container food-web-app-backend-1 Starting 
+ Container food-web-app-backend-1 Started 
+ Container food-web-app-frontend-1 Starting 
+ Container food-web-app-frontend-1 Started 
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+No broken requirements found.

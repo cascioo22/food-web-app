@@ -1,0 +1,93 @@
+time="2026-10-20T02:06:27Z" level=warning msg="buildx Docker CLI plugin not found: falling back to the classic builder. BuildKit-only build features (multi-arch, secrets, ssh, additional contexts, ...) will not be available"
+ Image food-web-app-frontend Building 
+ Image food-web-app-frontend Building 
+Sending build context to Docker daemon  30.04kB
+Step 1/6 : FROM nginx:alpine
+ ---> db35bfc6b295
+Step 2/6 : COPY default.conf /etc/nginx/conf.d/default.conf
+ ---> Using cache
+ ---> 74af1f9fd1ab
+Step 3/6 : COPY . /usr/share/nginx/html
+ ---> b984c8ac775a
+Step 4/6 : EXPOSE 80
+ ---> Running in ac3e0113ef94
+ ---> Removed intermediate container ac3e0113ef94
+ ---> e15474f7c800
+Step 5/6 : CMD ["nginx", "-g", "daemon off;"]
+ ---> Running in e909eb581d3a
+ ---> Removed intermediate container e909eb581d3a
+ ---> 86fbd3d80c09
+Step 6/6 : LABEL com.docker.compose.image.builder=classic
+ ---> Running in 9684f596658a
+ ---> Removed intermediate container 9684f596658a
+ ---> 8a0c35ffe073
+Successfully built 8a0c35ffe073
+Successfully tagged food-web-app-frontend:latest
+ Image food-web-app-frontend Built 
+ Image food-web-app-frontend Built 
+ Container food-web-app-frontend-1 Recreate 
+ Container food-web-app-frontend-1 Recreated 
+ Container food-web-app-frontend-1 Starting 
+ Container food-web-app-frontend-1 Started 
+PASS visible recipe creation control
+PASS input clicks do not close import
+PASS manual recipe persists via UI
+PASS detail renders both ingredients and steps
+PASS ingredient picker syncs detail selection
+PASS edit updates persisted title
+PASS nutrition input survives late recipe reads
+PASS nutrition save persists
+PASS list item completion survives reload
+PASS item edit persisted
+PASS bulk ingredient add persists
+PASS closing child dialog retains recipe
+PASS recipe photo upload and linking persist
+PASS recipe layout contains viewport at 375
+PASS recipe layout contains viewport at 600
+PASS recipe layout contains viewport at 768
+PASS recipe layout contains viewport at 900
+PASS recipe layout contains viewport at 1280
+PASS cooking retains original steps
+PASS cooking progress survives reload
+PASS cooking reset works
+PASS photo caption editing persists
+PASS photo unlink persists
+PASS photo delete persists
+PASS list rename persists
+PASS item deletion persists
+PASS list deletion persists
+PASS load failure displays retry
+PASS retry recovers real recipe data
+PASS recipe deletion persists
+PASS no uncaught browser errors
+PASS visible recipe creation control
+PASS input clicks do not close import
+PASS manual recipe persists via UI
+PASS detail renders both ingredients and steps
+PASS ingredient picker syncs detail selection
+PASS edit updates persisted title
+PASS nutrition input survives late recipe reads
+PASS nutrition save persists
+PASS list item completion survives reload
+PASS item edit persisted
+PASS bulk ingredient add persists
+PASS closing child dialog retains recipe
+PASS recipe photo upload and linking persist
+PASS recipe layout contains viewport at 375
+PASS recipe layout contains viewport at 600
+PASS recipe layout contains viewport at 768
+PASS recipe layout contains viewport at 900
+PASS recipe layout contains viewport at 1280
+PASS cooking retains original steps
+PASS cooking progress survives reload
+PASS cooking reset works
+PASS photo caption editing persists
+PASS photo unlink persists
+PASS photo delete persists
+PASS list rename persists
+PASS item deletion persists
+PASS list deletion persists
+PASS load failure displays retry
+PASS retry recovers real recipe data
+PASS recipe deletion persists
+PASS no uncaught browser errors

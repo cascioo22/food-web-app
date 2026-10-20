@@ -136,14 +136,17 @@
     <!-- Mobile Header -->
     <header class="mobile-header">
         <h1 class="sr-only">Food Webapp</h1>
-        <a href="#" class="menu-toggle" aria-label="Open menu">&#9776;</a>
         <a href="index.html" class="logo-link">🍎 Recipes</a>
     </header>
+
+    <section class="controls-section"><button id="new-recipe-btn" class="btn btn-primary">+ Add Recipe</button></section>
 
     <!-- Import Recipe Modal -->
     <div id="import-modal" class="import-modal hidden">
         <div class="modal-card">
+            <button id="close-import" class="modal-close" aria-label="Close import">&times;</button>
             <h3>Import or Create Recipe</h3>
+            <button id="manual-entry-btn" type="button" class="btn btn-secondary">Enter Manually</button>
             
             <div id="import-status" class="status-message hidden"></div>
 
@@ -371,8 +374,8 @@
 
             <!-- Actions -->
             <footer class="detail-actions">
-                <button id="add-to-list" class="btn btn-primary" onclick="addToGroceryList()">Add to Grocery List</button>
-                <button id="select-ingredients-btn" class="btn btn-secondary" onclick="showSelectIngredientsModal()">Select Ingredients...</button>
+                <button id="add-to-list" class="btn btn-primary">Add to Grocery List</button>
+                <button id="select-ingredients-btn" class="btn btn-secondary">Select Ingredients...</button>
                 <button id="start-cooking-btn" class="btn btn-primary" style="background: var(--color-success);">Start Cooking 🍳</button>
                 <button id="edit-recipe-btn-footer" class="btn btn-secondary">&#9998; Edit</button>
             </footer>
@@ -427,6 +430,10 @@
         </div>
     </div>
 
+    <div id="ingredient-picker" class="import-modal hidden" role="dialog" aria-modal="true" aria-label="Select ingredients and grocery list">
+        <div class="modal-card"><div id="ingredient-picker-content"></div><button id="close-ingredient-picker" class="btn btn-secondary">Close</button></div>
+    </div>
+
     <!-- Recipe Grid -->
     <main id="recipe-grid" class="grid" aria-label="Recipe library">
         <div class="loading-state">
@@ -438,7 +445,7 @@
     </main>
 
     <!-- Empty State -->
-    <section class="empty-state hidden">
+    <section id="library-empty" class="empty-state hidden">
         <span aria-hidden="true">&#127956;</span>
         <h2>No recipes found</h2>
         <p>Add your first recipe to get started!</p>
@@ -446,7 +453,7 @@
     </section>
 
     <!-- Error State -->
-    <section class="error-state hidden" aria-live="polite">
+    <section id="library-error" class="error-state hidden" aria-live="polite">
         <span aria-hidden="true">&#9888;</span>
         <h2>Error loading recipes</h2>
         <p>Please try again later.</p>

@@ -1,5 +1,6 @@
 """Food Webapp FastAPI backend with recipe and nutrition support."""
-from fastapi import FastAPI, Depends, HTTPException, status, File, Form
+from fastapi import FastAPI, Depends, HTTPException, status, File, Form, UploadFile
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -22,7 +23,7 @@ import base64
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Constants
-PHOTO_UPLOAD_DIR = "/opt/data/home/food-webapp-project/uploads/photos"
+PHOTO_UPLOAD_DIR = os.getenv("PHOTO_UPLOAD_DIR", "/app/uploads/photos")
 
 # Database setup
 SQLALCHEMY_DATABASE_URL = os.getenv(
@@ -51,8 +52,17 @@ class Recipe(Base):
     source = Column(String(100), default="manual")  # "import", "manual"
     original_url = Column(String(1024), nullable=True)
     instructions_ordered = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    ingredients_text = Column(Text, default="")
+    steps_ordered = Column(Text, default="")
+    prep_time = Column(String(200), default="")
+    servings = Column(String(200), default="")
+    category = Column(String(200), default="")
+
+    @property
+    def title(self):
+        return self.name
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 class Nutrition(Base):
     """Nutrition information model - separate table for flexibility."""
@@ -80,8 +90,8 @@ class Nutrition(Base):
     sugar_total = Column(Float, default=None)
     sodium_total = Column(Float, default=None)
     
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Photo(Base):
@@ -97,7 +107,21 @@ class Photo(Base):
     format = Column(String(20), default="jpeg")
     width = Column(Integer, default=0)
     height = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class GroceryList(Base):
+    __tablename__ = "grocery_lists"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(500), nullable=False)
+
+
+class GroceryItem(Base):
+    __tablename__ = "grocery_items"
+    id = Column(Integer, primary_key=True)
+    list_id = Column(Integer, ForeignKey("grocery_lists.id"), nullable=False)
+    name = Column(String(1000), nullable=False)
+    completed = Column(Boolean, default=False)
 
 
 def get_db():
@@ -171,8 +195,8 @@ class NutritionResponse(BaseModel):
     sugar_total: Optional[float]
     sodium_total: Optional[float]
     
-    created_at: Optional[str]
-    updated_at: Optional[str]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
     
     class Config:
         from_attributes = True
@@ -182,13 +206,19 @@ class RecipeResponse(BaseModel):
     """Schema for recipe response."""
     id: int
     name: str
+    title: str
+    ingredients_text: str = ""
+    steps_ordered: str = ""
+    prep_time: str = ""
+    servings: str = ""
+    category: str = ""
     url: Optional[str]
     manual_entry: Optional[str]
     source: str
     original_url: Optional[str]
     instructions_ordered: bool
-    created_at: Optional[str]
-    updated_at: Optional[str]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
     
     # Include nutrition if available
     nutrition: Optional[NutritionResponse] = None
@@ -330,8 +360,9 @@ def merge_items(existing: list[dict], new_item: dict) -> tuple[bool, int]:
     return (False, 0)  # Cannot merge
 
 
-def validate_nutrition_data(data: NutritionCreate) -> dict:
+def validate_nutrition_data(data: NutritionCreate | NutritionUpdate) -> dict:
     """Validate nutrition data - ensure non-negative values where applicable."""
+    import math
     validation_errors = []
     
     # Fields that must be non-negative if provided
@@ -344,7 +375,7 @@ def validate_nutrition_data(data: NutritionCreate) -> dict:
     
     for field in non_negative_fields:
         value = getattr(data, field)
-        if value is not None and value < 0:
+        if value is not None and (not math.isfinite(value) or value < 0):
             validation_errors.append(f"{field} must be non-negative")
     
     return {"valid": len(validation_errors) == 0, "errors": validation_errors}
@@ -418,6 +449,13 @@ app.add_middleware(
 def startup():
     """Create tables on startup."""
     Base.metadata.create_all(bind=engine)
+    # Add missing columns to existing SQLite installs without dropping data.
+    from sqlalchemy import inspect, text
+    existing = {col["name"] for col in inspect(engine).get_columns("recipes")}
+    with engine.begin() as connection:
+        for field in ("ingredients_text", "steps_ordered", "prep_time", "servings", "category"):
+            if field not in existing:
+                connection.execute(text(f"ALTER TABLE recipes ADD COLUMN {field} TEXT NOT NULL DEFAULT ''"))
 
 
 @app.get("/")
@@ -437,168 +475,122 @@ def health_check():
         return {"status": "unhealthy", "error": str(e)}
 
 
-# Photo Upload Endpoints (FW-08)
-@app.post("/photos")
-def upload_photo(
-    image_data: str = Form(),
-    caption: Optional[str] = Form(None),
-    recipe_id: Optional[int] = Form(None),
-):
-    """Upload a finished food photo."""
+# Images are re-encoded to strip EXIF/location metadata before persistence.
+MAX_PHOTO_BYTES = 10 * 1024 * 1024
+
+
+def photo_dict(photo):
+    return {"id": photo.id, "filename": photo.filename, "caption": photo.caption,
+            "recipe_id": photo.recipe_id, "url": f"/uploads/photos/{photo.filename}",
+            "thumbnail": photo.thumbnail_filename,
+            "thumbnail_url": f"/uploads/photos/thumbnails/{photo.thumbnail_filename}" if photo.thumbnail_filename else None,
+            "created_at": photo.created_at.isoformat() if photo.created_at else None}
+
+
+@app.post("/photos", status_code=201)
+async def upload_photo(image: Optional[UploadFile] = File(None), image_data: Optional[str] = Form(None),
+                       caption: Optional[str] = Form(None), recipe_id: Optional[int] = Form(None)):
+    from PIL import Image, ImageOps, UnidentifiedImageError
     from io import BytesIO
-    
-    if not image_data:
-        return {"success": False, "error": "No image data provided"}, 400
-    
-    try:
-        # Decode base64 data
-        decoded_bytes = base64.b64decode(image_data)
-        
-        # Validate the image first using photos module
-        validation = validate_image_data(f"data:image/png;base64,{image_data}")
-        
-        if not validation["success"]:
-            return {"success": False, "error": validation["error"]}, 400
-        
-        # Create upload directory structure
-        os.makedirs(PHOTO_UPLOAD_DIR, exist_ok=True)
-        os.makedirs(os.path.join(PHOTO_UPLOAD_DIR, "thumbnails"), exist_ok=True)
-        
-        # Generate safe filename
-        import uuid
-        safe_name = generate_safe_filename(str(uuid.uuid4()), 'uploaded_image')
-        photo_filename = f"{safe_name}.jpg"
-        thumb_filename = None
-        
-        try:
-            # Upload the image
-            result = upload_photo(
-                image_bytes=decoded_bytes,
-                filename=safe_name,
-                caption=caption or "",
-                recipe_id=recipe_id,
-                thumbnail=True
-            )
-            
-            if not result["success"]:
-                return {"success": False, "error": result.get("error", "Unknown error")}, 500
-            
-            thumb_filename = f"thumb_{safe_name}.jpg"
-            
-            # Store metadata in database
-            db = next(get_db())
-            # Use Photo directly (no circular import)
-            photo_record = Photo(
-                recipe_id=recipe_id,
-                filename=photo_filename,
-                thumbnail_filename=thumb_filename,
-                caption=caption or None,
-                file_size_bytes=len(decoded_bytes),
-                format="jpeg"
-            )
-            db.add(photo_record)
-            db.commit()
-            
-            return {
-                "success": True,
-                "message": "Photo uploaded successfully",
-                "filename": photo_filename,
-                "thumbnail": thumb_filename,
-                "caption": caption or None,
-                "recipe_id": recipe_id
-            }
-            
-        except Exception as e:
-            db.rollback()
-            return {"success": False, "error": str(e)}, 500
-            
-    except Exception as e:
-        return {"success": False, "error": f"Upload failed: {str(e)}"}, 400
-
-
-@app.delete("/photos/{filename}")
-def delete_photo_endpoint(filename: str):
-    """Delete a photo and its thumbnail."""
     from pathlib import Path
-    
-    result = delete_photo(filename)
-    
-    if result["success"]:
-        # Delete database record (if implemented)
-        db = next(get_db())
+    import uuid
+    if image:
+        raw = await image.read(MAX_PHOTO_BYTES + 1)
+    else:
         try:
-            # Use Photo directly (no circular import)
-            to_delete = db.query(Photo).filter_by(filename=filename).first()
-            if to_delete:
-                db.delete(to_delete)
-                db.commit()
+            if not image_data or len(image_data) > MAX_PHOTO_BYTES * 4 // 3 + 100:
+                raise ValueError()
+            raw = base64.b64decode(image_data.split(",", 1)[-1], validate=True)
         except Exception:
-            pass  # Database cleanup is optional for now
-        
-        return {"success": True, "message": f"Photo '{filename}' deleted successfully"}
-    
-    return result
+            raise HTTPException(status_code=400, detail="Valid image data is required")
+    if not raw or len(raw) > MAX_PHOTO_BYTES:
+        raise HTTPException(status_code=413, detail="Photo exceeds the 10 MB limit")
+    try:
+        with Image.open(BytesIO(raw)) as source:
+            if source.width * source.height > 25_000_000:
+                raise HTTPException(status_code=413, detail="Photo dimensions exceed the limit")
+            source.load()
+            clean = ImageOps.exif_transpose(source).convert("RGB")
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        raise HTTPException(status_code=400, detail="Unsupported or invalid image")
+    with SessionLocal() as db:
+        if recipe_id is not None:
+            require_record(db, Recipe, recipe_id)
+        directory = Path(PHOTO_UPLOAD_DIR)
+        (directory / "thumbnails").mkdir(parents=True, exist_ok=True)
+        filename = uuid.uuid4().hex + ".jpg"
+        thumb = "thumb_" + filename
+        try:
+            clean.save(directory / filename, "JPEG", quality=90)
+            thumbnail = clean.copy()
+            thumbnail.thumbnail((400, 400))
+            thumbnail.save(directory / "thumbnails" / thumb, "JPEG", quality=85)
+            record = Photo(recipe_id=recipe_id, filename=filename, thumbnail_filename=thumb,
+                           caption=(caption or "")[:1000], width=clean.width, height=clean.height,
+                           file_size_bytes=(directory / filename).stat().st_size, format="jpeg")
+            db.add(record)
+            db.commit()
+            return {"success": True, **photo_dict(record)}
+        except Exception:
+            db.rollback()
+            (directory / filename).unlink(missing_ok=True)
+            (directory / "thumbnails" / thumb).unlink(missing_ok=True)
+            raise
 
 
 @app.get("/photos")
 def list_photos(recipe_id: Optional[int] = None, limit: int = 100):
-    """List photos, optionally filtered by recipe."""
-    db = next(get_db())
-    
-    query = db.query(Photo)
-    if recipe_id:
-        query = query.filter_by(recipe_id=recipe_id)
-    
-    photos = query.order_by(Photo.created_at.desc()).limit(limit).all()
-    
-    return {
-        "success": True,
-        "photos": [
-            {
-                "id": photo.id,
-                "filename": photo.filename,
-                "thumbnail": photo.thumbnail_filename,
-                "caption": photo.caption,
-                "created_at": photo.created_at.isoformat() if photo.created_at else None
-            } for photo in photos
-        ]
-    }
+    with SessionLocal() as db:
+        query = db.query(Photo)
+        if recipe_id is not None:
+            query = query.filter_by(recipe_id=recipe_id)
+        return {"success": True, "photos": [photo_dict(p) for p in query.order_by(Photo.id.desc()).limit(max(1, min(limit, 1000)))]}
 
 
-@app.get("/photos/{filename}")
-def get_photo(filename: str):
-    """Get a specific photo."""
+def find_photo(db, identifier):
+    photo = db.get(Photo, int(identifier)) if identifier.isdigit() else db.query(Photo).filter_by(filename=identifier).first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    return photo
+
+
+@app.get("/photos/{identifier}")
+def get_photo(identifier: str):
+    with SessionLocal() as db:
+        return photo_dict(find_photo(db, identifier))
+
+
+@app.put("/photos/{identifier}")
+def update_photo(identifier: str, data: dict):
+    with SessionLocal() as db:
+        photo = find_photo(db, identifier)
+        if "caption" in data:
+            photo.caption = str(data["caption"] or "")[:1000]
+        if "recipe_id" in data:
+            if data["recipe_id"] is not None:
+                require_record(db, Recipe, data["recipe_id"])
+            photo.recipe_id = data["recipe_id"]
+        db.commit()
+        return photo_dict(photo)
+
+
+@app.delete("/photos/{identifier}", status_code=204)
+def delete_photo_endpoint(identifier: str):
     from pathlib import Path
-    
-    # Check if photo exists
-    if not os.path.exists(os.path.join(PHOTO_UPLOAD_DIR, filename)):
-        return {"success": False, "error": "Photo not found"}, 404
-    
-    with open(os.path.join(PHOTO_UPLOAD_DIR, filename), 'rb') as f:
-        photo_bytes = f.read()
-    
-    # Get thumbnail if available
-    thumb_filename = None
-    thumb_path = os.path.join(PHOTO_UPLOAD_DIR, "thumbnails", f"thumb_{filename}")
-    if os.path.exists(thumb_path):
-        with open(thumb_path, 'rb') as tf:
-            thumb_bytes = tf.read()
-        thumb_filename = f"thumb_{filename}"
-    
-    return {
-        "success": True,
-        "filename": filename,
-        "data": base64.b64encode(photo_bytes).decode('utf-8'),
-        "thumbnail_data": base64.b64encode(thumb_bytes).decode('utf-8') if thumb_filename else None,
-        "thumb_filename": thumb_filename
-    }
+    with SessionLocal() as db:
+        photo = find_photo(db, identifier)
+        directory = Path(PHOTO_UPLOAD_DIR)
+        (directory / Path(photo.filename).name).unlink(missing_ok=True)
+        if photo.thumbnail_filename:
+            (directory / "thumbnails" / Path(photo.thumbnail_filename).name).unlink(missing_ok=True)
+        db.delete(photo)
+        db.commit()
 
 
 # Recipe CRUD endpoints
 @app.get("/recipes", response_model=list[RecipeResponse])
 def get_recipes():
     """Get all recipes."""
-    print("=== DEBUG: /recipes endpoint called ===")  # Debug output
     with SessionLocal() as db:
         # Include nutrition if it exists
         recipes = []
@@ -663,7 +655,8 @@ def create_recipe(recipe_data: dict):
                 manual_entry=manual_entry,
                 source=source,
                 original_url=original_url,
-                instructions_ordered=instructions_ordered
+                instructions_ordered=instructions_ordered,
+                **{field: recipe_data.get(field, "") for field in ("ingredients_text", "steps_ordered", "prep_time", "servings", "category")}
             )
             db.add(db_recipe)
             db.commit()
@@ -688,7 +681,11 @@ def update_recipe(recipe_id: int, recipe_update: dict):
             
             # Update fields that are provided
             updates = {}
-            for field in ["name", "url", "manual_entry", "instructions_ordered"]:
+            if "title" in recipe_update:
+                recipe_update["name"] = recipe_update["title"]
+            if "name" in recipe_update and not str(recipe_update["name"]).strip():
+                raise HTTPException(status_code=400, detail="Recipe title is required")
+            for field in ["name", "url", "manual_entry", "instructions_ordered", "ingredients_text", "steps_ordered", "prep_time", "servings", "category"]:
                 value = recipe_update.get(field)
                 if value is not None:
                     updates[field] = value
@@ -718,6 +715,9 @@ def delete_recipe(recipe_id: int):
             raise HTTPException(status_code=404, detail="Recipe not found")
         
         try:
+            db.query(IngredientModel).filter_by(recipe_id=recipe_id).delete()
+            db.query(Nutrition).filter_by(recipe_id=recipe_id).delete()
+            db.query(Photo).filter_by(recipe_id=recipe_id).update({"recipe_id": None})
             db.delete(recipe)
             db.commit()
         except IntegrityError as e:
@@ -729,96 +729,70 @@ def delete_recipe(recipe_id: int):
 # BULK ADD RECIPE INGREDIENTS TO GROCERY LIST (FW-10)
 # ============================================
 
+@app.post("/recipes/import-url")
+def import_recipe_url(data: dict):
+    from import_service import fetch_recipe_html, extract_recipe
+    url = str(data.get("url") or "").strip()
+    try:
+        extracted = extract_recipe(fetch_recipe_html(url), url)
+        return {"success": True, **extracted}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/recipes/manual-entry/save", response_model=RecipeResponse, status_code=201)
+def save_manual_recipe(data: dict):
+    if not str(data.get("title") or data.get("name") or "").strip():
+        raise HTTPException(status_code=400, detail="Recipe title is required")
+    data["source"] = "import" if data.get("original_url") else "manual"
+    data["instructions_ordered"] = True
+    return create_recipe(data)
+
+
 @app.get("/recipes/{recipe_id}/ingredients", response_model=list[dict])
 def get_recipe_ingredients(recipe_id: int):
-    """Get structured ingredient list for a recipe."""
-    from sqlalchemy import inspect as sqla_inspect
-    
+    """Materialize stable ingredient IDs while preserving original lines."""
     with SessionLocal() as db:
-        # Check if ingredients table exists first
-        inspector = sqla_inspect(db.get_bind())
-        if "ingredients" not in inspector.get_table_names():
-            # Table doesn't exist yet, parse from text instead
-            recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
-            if not recipe:
-                raise HTTPException(status_code=404, detail="Recipe not found")
-            
-            ingredients_text = recipe.ingredients_text or ""
-            parsed_ingredients = parse_ingredients_text(ingredients_text)
-            # Return as dicts without IDs for now
-            return [{"name": ing["name"], "amount": ing["amount"]} for ing in parsed_ingredients]
-        
-        # Table exists - return from structured storage
-        recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+        recipe = db.get(Recipe, recipe_id)
         if not recipe:
             raise HTTPException(status_code=404, detail="Recipe not found")
-        
-        ingredients = db.query(IngredientModel).filter(IngredientModel.recipe_id == recipe_id).all()
-        return [{"id": ing.id, "name": ing.name, "amount": ing.amount} for ing in ingredients]
+        lines = [line.strip() for line in (recipe.ingredients_text or "").splitlines() if line.strip()]
+        ingredients = db.query(IngredientModel).filter_by(recipe_id=recipe_id).order_by(IngredientModel.id).all()
+        if [i.name for i in ingredients] != lines:
+            db.query(IngredientModel).filter_by(recipe_id=recipe_id).delete()
+            ingredients = [IngredientModel(recipe_id=recipe_id, name=line, amount="") for line in lines]
+            db.add_all(ingredients)
+            db.commit()
+        return [{"id": i.id, "name": i.name, "amount": i.amount or ""} for i in ingredients]
 
 
 
-@app.post("/recipes/{recipe_id}/ingredients/add-to-list", response_model=BulkAddResult)
-def add_recipe_ingredients_to_list(request: RecipeIngredientsRequest):
-    """Add selected ingredients from a recipe to a grocery list."""
-    from sqlalchemy import inspect as sqla_inspect
-    
+@app.post("/recipes/{recipe_id}/ingredients/add-to-list")
+def add_recipe_ingredients_to_list(recipe_id: int, request: RecipeIngredientsRequest):
+    if request.recipe_id != recipe_id:
+        raise HTTPException(status_code=400, detail="Recipe ID mismatch")
+    ingredients = get_recipe_ingredients(recipe_id)
+    known_ids = {i["id"] for i in ingredients}
+    if not set(request.ingredient_ids).issubset(known_ids):
+        raise HTTPException(status_code=400, detail="Unknown ingredient selection")
+    selected = [i for i in ingredients if not request.ingredient_ids or i["id"] in request.ingredient_ids]
     with SessionLocal() as db:
-        # Validate recipe exists
-        recipe = db.query(Recipe).filter(Recipe.id == request.recipe_id).first()
-        if not recipe:
-            raise HTTPException(status_code=404, detail="Recipe not found")
-        
-        # Check if grocery_lists table exists
-        inspector = sqla_inspect(db.get_bind())
-        if "grocery_lists" not in inspector.get_table_names():
-            # Grocery list feature not available yet (depends on FW-07)
-            return BulkAddResult(
-                success=False,
-                added_count=0,
-                skipped_duplicates=0,
-                items_added=[],
-                warning="Grocery lists feature not yet implemented. Please create grocery list via FW-07."
-            )
-        
-        # Check if ingredients table exists
-        if "ingredients" not in inspector.get_table_names():
-            # Parse from text instead
-            ingredients_text = recipe.ingredients_text or ""
-            parsed_ingredients = parse_ingredients_text(ingredients_text)
-            
-            # Filter selected if specified
-            if request.ingredient_ids:
-                all_ids = []
-                for idx, ing in enumerate(parsed_ingredients):
-                    all_ids.append({"id": idx, "name": ing["name"], "amount": ing["amount"]})
-            else:
-                all_ids = parsed_ingredients
-            
-            return BulkAddResult(
-                success=True,
-                added_count=len(all_ids),
-                skipped_duplicates=0,
-                items_added=all_ids
-            )
-        
-        # Table exists - get structured ingredients
-        ingredients = db.query(IngredientModel).filter(IngredientModel.recipe_id == recipe_id).all()
-        
-        if request.ingredient_ids:
-            selected_ingredients = [ing for ing in ingredients if ing.id in request.ingredient_ids]
-        else:
-            selected_ingredients = ingredients
-        
-        # Convert to response format
-        result_items = [{"id": ing.id, "name": ing.name, "amount": ing.amount, "checked": ing.checked} for ing in selected_ingredients]
-        
-        return BulkAddResult(
-            success=True,
-            added_count=len(result_items),
-            skipped_duplicates=0,
-            items_added=result_items
-        )
+        require_record(db, GroceryList, request.grocery_list_id)
+        existing = {i.name.casefold().strip() for i in db.query(GroceryItem).filter_by(list_id=request.grocery_list_id)}
+        added, skipped = [], 0
+        for ingredient in selected:
+            name = ingredient["name"]
+            if name.casefold().strip() in existing:
+                skipped += 1
+                continue
+            item = GroceryItem(list_id=request.grocery_list_id, name=name, completed=False)
+            db.add(item)
+            added.append(item)
+            existing.add(name.casefold().strip())
+        db.commit()
+        return {"success": True, "added_count": len(added), "skipped_duplicates": skipped,
+                "items_added": [item_dict(i) for i in added]}
+
 
 # Nutrition endpoints
 
@@ -849,7 +823,7 @@ def create_nutrition(recipe_id: int, nutrition_data: NutritionCreate):
                 )
             
             # Create new nutrition record with only provided fields (partial data allowed)
-            db_nutrition = Nutrition(recipe_id=recipe_id)
+            db_nutrition = Nutrition(recipe_id=recipe_id, serving_size=nutrition_data.serving_size)
             
             # Set per-serving values
             if nutrition_data.calories_per_serving is not None:
@@ -929,16 +903,12 @@ def update_nutrition(recipe_id: int, nutrition_update: NutritionUpdate):
             if not existing:
                 return create_nutrition(recipe_id, nutrition_update)
             
-            # Partial update - only set fields that are provided and not None
-            for field in ["serving_size", "calories_per_serving", "protein_per_serving",
-                         "carbohydrates_per_serving", "fat_per_serving", "fiber_per_serving",
-                         "sugar_per_serving", "sodium_per_serving", "calories_total",
-                         "protein_total", "carbohydrates_total", "fat_total", "fiber_total",
-                         "sugar_total", "sodium_total"]:
-                value = getattr(nutrition_update, field)
-                if value is not None:
-                    setattr(existing, field, value)
-            
+            validation = validate_nutrition_data(nutrition_update)
+            if not validation["valid"]:
+                raise HTTPException(status_code=400, detail={"message": "Invalid nutrition values", "errors": validation["errors"]})
+            for field, value in nutrition_update.model_dump(exclude_unset=True).items():
+                setattr(existing, field, value)
+
             db.commit()
             db.refresh(existing)
             
@@ -967,53 +937,111 @@ def delete_nutrition(recipe_id: int):
             raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
 
 
+def require_record(db, model, record_id):
+    record = db.get(model, record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return record
+
+
+def required_name(data):
+    name = str(data.get("name") or "").strip()
+    if not name or len(name) > 1000:
+        raise HTTPException(status_code=400, detail="A name of 1–1000 characters is required")
+    return name
+
+
+def item_dict(item):
+    return {"id": item.id, "name": item.name, "completed": item.completed}
+
+
+def list_dict(db, record):
+    return {"id": record.id, "name": record.name,
+            "items": [item_dict(i) for i in db.query(GroceryItem).filter_by(list_id=record.id).order_by(GroceryItem.id)]}
+
+
 @app.get("/grocery-lists")
 def get_grocery_lists():
-    """Get all grocery lists (stub - feature not yet implemented)."""
-    return {"success": True, "grocery_lists": [], "warning": "Grocery lists feature not yet implemented."}
+    with SessionLocal() as db:
+        return [list_dict(db, record) for record in db.query(GroceryList).order_by(GroceryList.id)]
 
 
-@app.post("/grocery-lists")
+@app.post("/grocery-lists", status_code=201)
 def create_grocery_list(data: dict):
-    """Create a grocery list (stub)."""
-    return {"success": True, "message": "Grocery list created"}
+    with SessionLocal() as db:
+        record = GroceryList(name=required_name(data))
+        db.add(record)
+        db.commit()
+        return list_dict(db, record)
 
-# Photos endpoints (from photos.py)
+
+@app.get("/grocery-lists/{list_id}")
+def get_grocery_list(list_id: int):
+    with SessionLocal() as db:
+        return list_dict(db, require_record(db, GroceryList, list_id))
+
+
+@app.patch("/grocery-lists/{list_id}")
+@app.put("/grocery-lists/{list_id}")
+def rename_grocery_list(list_id: int, data: dict):
+    with SessionLocal() as db:
+        record = require_record(db, GroceryList, list_id)
+        record.name = required_name(data)
+        db.commit()
+        return list_dict(db, record)
+
+
+@app.delete("/grocery-lists/{list_id}", status_code=204)
+def remove_grocery_list(list_id: int):
+    with SessionLocal() as db:
+        record = require_record(db, GroceryList, list_id)
+        db.query(GroceryItem).filter_by(list_id=list_id).delete()
+        db.delete(record)
+        db.commit()
+
+
+@app.post("/grocery-lists/{list_id}/items", status_code=201)
+def create_grocery_item(list_id: int, data: dict):
+    with SessionLocal() as db:
+        require_record(db, GroceryList, list_id)
+        item = GroceryItem(list_id=list_id, name=required_name(data), completed=False)
+        db.add(item)
+        db.commit()
+        return item_dict(item)
+
+
+@app.patch("/grocery-lists/{list_id}/items/{item_id}")
+@app.put("/grocery-lists/{list_id}/items/{item_id}")
+def update_grocery_item(list_id: int, item_id: int, data: dict):
+    with SessionLocal() as db:
+        item = require_record(db, GroceryItem, item_id)
+        if item.list_id != list_id:
+            raise HTTPException(status_code=404, detail="Item not found in this list")
+        if "name" in data:
+            item.name = required_name(data)
+        if "completed" in data:
+            if not isinstance(data["completed"], bool):
+                raise HTTPException(status_code=400, detail="completed must be boolean")
+            item.completed = data["completed"]
+        db.commit()
+        return item_dict(item)
+
+
+@app.delete("/grocery-lists/{list_id}/items/{item_id}", status_code=204)
+def remove_grocery_item(list_id: int, item_id: int):
+    with SessionLocal() as db:
+        item = require_record(db, GroceryItem, item_id)
+        if item.list_id != list_id:
+            raise HTTPException(status_code=404, detail="Item not found in this list")
+        db.delete(item)
+        db.commit()
+
 @app.get("/recipes/{recipe_id}/photos", response_model=list[dict])
 def get_recipe_photos(recipe_id: int):
-    """Get photos for a recipe."""
-    try:
-        with SessionLocal() as db:
-            # Import Recipe model here to avoid circular import
-            from backend.recipe_import import Recipe, Nutrition
-            recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
-            if not recipe:
-                raise HTTPException(status_code=404, detail="Recipe not found")
-            
-            # Get photo paths (implementation depends on actual storage)
-            return [{"path": "/photos/placeholder.jpg"}]
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/recipes/{recipe_id}/photos", response_model=dict)
-def add_recipe_photo(recipe_id: int, photo_path: str):
-    """Add a photo to a recipe."""
     with SessionLocal() as db:
-        try:
-            from backend.recipe_import import Recipe
-            
-            recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
-            if not recipe:
-                raise HTTPException(status_code=404, detail="Recipe not found")
-            
-            # Add photo (implementation depends on actual storage)
-            return {"status": "ok", "path": photo_path}
-        except HTTPException:
-            raise
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(status_code=500, detail=str(e))
+        require_record(db, Recipe, recipe_id)
+        return [photo_dict(p) for p in db.query(Photo).filter_by(recipe_id=recipe_id).order_by(Photo.id.desc())]
+
+
+os.makedirs(PHOTO_UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads/photos", StaticFiles(directory=PHOTO_UPLOAD_DIR), name="photos")

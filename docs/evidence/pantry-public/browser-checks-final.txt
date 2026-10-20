@@ -1,0 +1,16 @@
+PASS visible recipe creation control
+PASS input clicks do not close import
+PASS manual recipe persists via UI
+PASS detail renders both ingredients and steps
+PASS ingredient picker syncs detail selection
+PASS edit updates persisted title
+AssertionError [ERR_ASSERTION]: nutrition save persists
+    at check (/opt/data/home/food-webapp-project/tests/ui_repair_browser.cjs:26:41)
+    at /opt/data/home/food-webapp-project/tests/ui_repair_browser.cjs:69:5 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

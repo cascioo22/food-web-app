@@ -1,395 +1,96 @@
-/**
- * Food Webapp — Grocery Lists JavaScript
- * Handles multiple independent grocery lists and item management.
- */
-
+/* Grocery lists and every item change are persisted through the API. */
 document.addEventListener('DOMContentLoaded', () => {
-    const listsContainer = document.getElementById('lists-container');
-    const addListBtn = document.getElementById('add-list-btn');
-    const addListBtnInline = document.getElementById('add-list-btn-inline');
-    const emptyState = document.querySelector('.empty-state');
-    const errorState = document.querySelector('.error-state');
-    
-    // Modal elements
-    const listModal = document.getElementById('list-modal');
-    const closeListModalBtn = document.getElementById('close-list-modal');
-    const addListItemBtn = document.getElementById('add-item-btn');
-    const saveListBtn = document.getElementById('save-list-btn');
-    const listNameInput = document.getElementById('list-name-input');
-    
-    // Item-specific modal elements (for edit)
-    const itemEditModal = document.getElementById('item-edit-modal');
-    const closeItemEditModalBtn = document.getElementById('close-item-edit-modal');
-    const editItemNameInput = document.getElementById('edit-item-name-input');
-    const editItemCompletedCheck = document.getElementById('edit-item-completed-check');
-    
-    let currentListId = null;
-    let editingItemId = null;
-    let lists = [];
-    let isLoading = false;
-
-    // Load lists from backend on init
-    function loadLists() {
-        if (isLoading) return;
-        isLoading = true;
-        
-        fetch('/grocery-lists')
-            .then(res => res.json())
-            .then(data => {
-                lists = data || [];
-                renderLists();
-                emptyState.classList.add('hidden');
-                errorState.classList.add('hidden');
-                isLoading = false;
-            })
-            .catch(err => {
-                console.error('Failed to load grocery lists:', err);
-                errorState.classList.remove('hidden');
-                isLoading = false;
-            });
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    let lists = [], currentListId = null, editingItemId = null;
+    async function api(path, method='GET', data) {
+        const response = await fetch(path,{method,...(data === undefined ? {} : {headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})});
+        const result = response.status === 204 ? null : await response.json();
+        if (!response.ok) throw new Error(typeof result?.detail === 'string' ? result.detail : 'Request failed');
+        return result;
     }
-
-    // Render list items in grid
-    function renderLists() {
-        if (lists.length > 0) {
-            listsContainer.innerHTML = lists.map(list => {
-                const itemCount = list.items ? JSON.parse(list.items).length : 0;
-                return `
-                    <article class="recipe-card">
-                        <div class="recipe-content" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
-                            <h3 class="recipe-title">${escapeHtml(list.name)}</h3>
-                            <span class="recipe-meta">📝 ${itemCount} items</span>
-                        </div>
-                    </article>
-                `;
-            }).join('');
-        } else {
-            listsContainer.innerHTML = '';
-        }
+    function close(id) { $(id).classList.add('hidden'); document.body.style.overflow = $('list-modal').classList.contains('hidden') ? '' : 'hidden'; }
+    function show(id) { $(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+    function renderItems() {
+        const list = lists.find(l=>l.id===currentListId);
+        $('items-list').innerHTML = (list?.items || []).map(i=>`<li class="grocery-item" data-id="${i.id}"><input class="item-check" type="checkbox" aria-label="Mark ${esc(i.name)} complete" ${i.completed?'checked':''}><button class="item-text" data-action="edit">${esc(i.name)}</button><button class="item-delete" data-action="delete" aria-label="Delete ${esc(i.name)}">×</button></li>`).join('');
+        $('add-item-btn').disabled = !currentListId;
     }
-
-    // Add new list (create modal)
-    function addList() {
-        currentListId = null;
-        editingItemId = null;
-        listNameInput.value = '';
-        saveListBtn.textContent = 'Save';
-        itemEditModal.classList.add('hidden');
-        listModal.classList.remove('hidden');
-        listNameInput.focus();
-    }
-
-    // Edit existing list name
-    function editList(list) {
-        currentListId = list.id;
-        editingItemId = null;
-        listNameInput.value = list.name;
-        saveListBtn.textContent = 'Update';
-        itemEditModal.classList.add('hidden');
-        listModal.classList.remove('hidden');
-        listNameInput.focus();
-    }
-
-    // Delete list with confirmation
-    function deleteList(listId) {
-        if (!confirm(`Delete the list permanently? This action cannot be undone.`)) {
-            return;
-        }
-        
-        fetch(`/grocery-lists/${listId}`, { method: 'DELETE' })
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to delete list');
-                loadLists();
-            })
-            .catch(err => {
-                console.error('Failed to delete list:', err);
-                alert('Failed to delete the list. Please try again.');
-            });
-    }
-
-    // Create new item in current list
-    function addItem() {
-        if (!currentListId) return;
-        
-        const list = lists.find(l => l.id === currentListId);
-        if (!list) return;
-        
-        const items = list.items ? JSON.parse(list.items) : [];
-        items.push({ id: Date.now().toString(), name: '', completed: false });
-        list.items = JSON.stringify(items);
-        
-        saveListToStorage();
-        loadLists();
-    }
-
-    // Edit item in modal
-    function editItem(item, listId) {
-        currentListId = listId;
-        editingItemId = item.id;
-        editItemNameInput.value = item.name;
-        editItemCompletedCheck.checked = item.completed;
-        itemEditModal.classList.remove('hidden');
-        editItemNameInput.focus();
-    }
-
-    // Delete item in current list
-    function deleteItem(item) {
-        if (!currentListId) return;
-        
-        const list = lists.find(l => l.id === currentListId);
-        if (!list) return;
-        
-        if (confirm('Delete this item?')) {
-            const items = list.items ? JSON.parse(list.items) : [];
-            list.items = JSON.stringify(items.filter(i => i.id !== editingItemId));
-            saveListToStorage();
-            loadLists();
-        }
-    }
-
-    // Toggle item completion
-    function toggleItem(item) {
-        if (!currentListId) return;
-        
-        const list = lists.find(l => l.id === currentListId);
-        if (!list) return;
-        
-        const items = list.items ? JSON.parse(list.items) : [];
-        const idx = items.findIndex(i => i.id === item.id);
-        if (idx !== -1) {
-            items[idx].completed = !items[idx].completed;
-            list.items = JSON.stringify(items);
-            saveListToStorage();
-            
-            // Re-render to show visual feedback
-            renderLists();
-        }
-    }
-
-    // Save list (name update or create new)
-    function saveList() {
-        const name = listNameInput.value.trim() || 'New List';
-        
-        if (!currentListId) {
-            // Create new list
-            fetch('/grocery-lists', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.id) {
-                    lists.push({ ...data, items: '[]' });
-                    currentListId = data.id;
-                }
-                listModal.classList.add('hidden');
-                loadLists();
-            })
-            .catch(err => {
-                console.error('Failed to create list:', err);
-                alert('Failed to create the list. Please try again.');
-            });
-        } else {
-            // Update existing list name
-            updateListName(currentListId, name);
-        }
-    }
-
-    // Update list name via backend
-    function updateListName(listId, name) {
-        // For now, we'll handle this on the client side for simplicity
-        const list = lists.find(l => l.id === listId);
-        if (list) {
-            list.name = name;
-            renderLists();
-            saveListToStorage();
-            listModal.classList.add('hidden');
-        }
-    }
-
-    // Save list items
-    function saveListItems() {
-        if (!currentListId) return;
-        
-        const list = lists.find(l => l.id === currentListId);
-        if (!list) return;
-        
-        saveListToStorage();
-        loadLists();
-        itemEditModal.classList.add('hidden');
-    }
-
-    // Save items to localStorage (sync with backend)
-    function saveListToStorage() {
+    async function loadLists() {
         try {
-            localStorage.setItem('groceryLists', JSON.stringify(lists));
-        } catch (err) {
-            console.error('Failed to save lists to localStorage:', err);
-        }
+            lists = await api('/grocery-lists');
+            $('lists-container').innerHTML = lists.map(l=>`<article class="recipe-card list-card" data-id="${l.id}"><button class="list-open" data-action="open"><h3>${esc(l.name)}</h3><span>${l.items.filter(i=>i.completed).length}/${l.items.length} purchased</span></button><button data-action="delete" class="btn btn-secondary">Delete List</button></article>`).join('');
+            document.querySelector('.empty-state').classList.toggle('hidden',!!lists.length);
+            document.querySelector('.error-state').classList.add('hidden');
+            if (currentListId) renderItems();
+        } catch(error) { document.querySelector('.error-state').classList.remove('hidden'); }
     }
-
-    // Close modal handlers
-    if (closeListModalBtn) {
-        closeListModalBtn.addEventListener('click', () => {
-            listModal.classList.add('hidden');
-        });
+    function openList(id=null) {
+        currentListId=id; editingItemId=null;
+        $('list-name-input').value=lists.find(l=>l.id===id)?.name || '';
+        $('save-list-btn').textContent=id?'Save Name':'Create List';
+        close('item-edit-modal'); renderItems(); show('list-modal'); $('list-name-input').focus();
     }
-    
-    if (closeItemEditModalBtn) {
-        closeItemEditModalBtn.addEventListener('click', () => {
-            itemEditModal.classList.add('hidden');
-        });
-    }
-
-    // Modal backdrop click to close
-    if (listModal) {
-        listModal.querySelector('.modal-backdrop').addEventListener('click', () => {
-            listModal.classList.add('hidden');
-        });
-    }
-    
-    // Edit item modal backdrop
-    if (itemEditModal) {
-        itemEditModal.querySelector('.modal-backdrop')?.addEventListener('click', () => {
-            itemEditModal.classList.add('hidden');
-        });
-    }
-
-    // Button event listeners
-    if (addListBtn) addListBtn.addEventListener('click', addList);
-    if (addListBtnInline) addListBtnInline.addEventListener('click', addList);
-    
-    if (saveListBtn) {
-        saveListBtn.addEventListener('click', () => {
-            if (!currentListId) {
-                saveList();
-            } else {
-                updateListName(currentListId, listNameInput.value.trim() || 'New List');
-            }
-        });
-    }
-    
-    if (listNameInput) {
-        listNameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') saveList();
-        });
-    }
-
-    // Item management buttons - attach to each card dynamically
-    listsContainer.addEventListener('click', (e) => {
-        const itemCheck = e.target.closest('.item-check');
-        const itemName = e.target.closest('.item-text');
-        const deleteBtn = e.target.closest('.item-delete');
-        
-        if (!currentListId && itemCheck) {
-            // User clicked check on a list card - open edit modal
-            const list = lists.find(l => l.id === currentListId);
-            if (list) {
-                const items = list.items ? JSON.parse(list.items) : [];
-                if (items.length > 0) {
-                    editItem(items[0], currentListId);
-                } else {
-                    addItem();
-                }
-            }
-        }
-        
-        if (itemCheck) {
-            const card = e.target.closest('.recipe-card');
-            if (card) {
-                // Determine which list we're editing based on the modal state
-                if (!currentListId) currentListId = lists[0]?.id || null;
-                
-                toggleItem({ id: itemCheck.dataset.id });
-            }
-        }
-        
-        if (itemName && itemName.textContent.trim()) {
-            const card = e.target.closest('.recipe-card');
-            if (card) {
-                // Edit mode - update the item name inline
-                const list = lists.find(l => l.id === currentListId);
-                if (list) {
-                    const items = list.items ? JSON.parse(list.items) : [];
-                    const idx = items.findIndex(i => i.id === editingItemId);
-                    if (idx !== -1) {
-                        items[idx].name = itemName.textContent.trim();
-                        list.items = JSON.stringify(items);
-                        saveListToStorage();
-                        loadLists();
-                    }
-                }
-            }
-        }
-        
-        if (deleteBtn) {
-            const card = e.target.closest('.recipe-card');
-            if (card) {
-                // Delete mode - delete the item
-                const list = lists.find(l => l.id === currentListId);
-                if (list) {
-                    const items = list.items ? JSON.parse(list.items) : [];
-                    const idx = items.findIndex(i => i.id === editingItemId);
-                    if (idx !== -1) {
-                        deleteItem(items[idx]);
-                    }
-                }
-            }
-        }
-    });
-
-    // Save item edits
-    if (itemEditModal) {
-        itemEditModal.querySelector('form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const itemId = editingItemId;
-            const itemName = editItemNameInput.value.trim();
-            
-            const list = lists.find(l => l.id === currentListId);
-            if (!list) return;
-            
-            const items = list.items ? JSON.parse(list.items) : [];
-            const idx = items.findIndex(i => i.id === itemId);
-            if (idx !== -1) {
-                items[idx].name = itemName;
-                items[idx].completed = editItemCompletedCheck.checked;
-                list.items = JSON.stringify(items);
-                saveListToStorage();
-                loadLists();
-            }
-        });
-    }
-
-    // Load from localStorage for offline support
-    function loadItemsFromStorage() {
+    async function saveList() {
+        const name=$('list-name-input').value.trim();
+        if (!name) { $('list-name-input').focus(); return; }
         try {
-            const stored = localStorage.getItem('groceryLists');
-            if (stored) {
-                lists = JSON.parse(stored);
-            }
-        } catch (err) {
-            console.error('Failed to load from localStorage:', err);
+            const list=await api(currentListId?`/grocery-lists/${currentListId}`:'/grocery-lists',currentListId?'PATCH':'POST',{name});
+            currentListId=list.id;
+            await loadLists();
+            $('save-list-btn').textContent='Save Name'; $('add-item-btn').disabled=false;
+        } catch(error) { alert(error.message); }
+    }
+    function openItem(item=null) {
+        editingItemId=item?.id || null;
+        $('item-edit-modal-title').textContent=item?'Edit Item':'Add Item';
+        $('edit-item-name-input').value=item?.name || '';
+        $('edit-item-completed-check').checked=item?.completed || false;
+        show('item-edit-modal'); $('edit-item-name-input').focus();
+    }
+    $('add-list-btn').onclick=$('add-list-btn-inline').onclick=()=>openList();
+    $('save-list-btn').onclick=saveList;
+    $('list-name-input').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();saveList();}};
+    $('close-list-modal').onclick=()=>close('list-modal');
+    $('close-item-edit-modal').onclick=$('cancel-edit-item').onclick=()=>close('item-edit-modal');
+    $('add-item-btn').onclick=()=>openItem();
+    for(const id of ['list-modal','item-edit-modal']) $(id).addEventListener('click',e=>{if(e.target===$(id)||e.target.classList.contains('modal-backdrop'))close(id);});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')close(!$('item-edit-modal').classList.contains('hidden')?'item-edit-modal':'list-modal');});
+    $('lists-container').onclick=async e=>{
+        const card=e.target.closest('[data-id]'), action=e.target.closest('[data-action]')?.dataset.action;
+        if(!card||!action)return;
+        const id=Number(card.dataset.id);
+        if(action==='open'){openList(id);return;}
+        if(action==='delete'&&confirm('Delete this grocery list and its items?')){
+            try{await api(`/grocery-lists/${id}`,'DELETE');await loadLists();}catch(error){alert(error.message);}
         }
-    }
-
-    // Error state handler
-    if (errorState && document.getElementById('retry-lists-btn')) {
-        document.getElementById('retry-lists-btn').addEventListener('click', () => {
-            errorState.classList.add('hidden');
-            loadLists();
-        });
-    }
-
-    // Initial load from backend and localStorage
-    loadItemsFromStorage();
+    };
+    $('items-list').onchange=async e=>{
+        if(!e.target.matches('.item-check'))return;
+        const id=Number(e.target.closest('[data-id]').dataset.id);
+        try{await api(`/grocery-lists/${currentListId}/items/${id}`,'PATCH',{completed:e.target.checked});await loadLists();}catch(error){e.target.checked=!e.target.checked;alert(error.message);}
+    };
+    $('items-list').onclick=async e=>{
+        const row=e.target.closest('[data-id]'), action=e.target.closest('[data-action]')?.dataset.action;
+        if(!row||!action)return;
+        const item=lists.find(l=>l.id===currentListId)?.items.find(i=>i.id===Number(row.dataset.id));
+        if(action==='edit')openItem(item);
+        else if(action==='delete'&&confirm('Delete this item?')){
+            try{await api(`/grocery-lists/${currentListId}/items/${item.id}`,'DELETE');await loadLists();}catch(error){alert(error.message);}
+        }
+    };
+    $('item-edit-modal').querySelector('form').onsubmit=async e=>{
+        e.preventDefault(); const name=$('edit-item-name-input').value.trim(); if(!name)return;
+        try{
+            const path=`/grocery-lists/${currentListId}/items`;
+            if(editingItemId)await api(`${path}/${editingItemId}`,'PATCH',{name,completed:$('edit-item-completed-check').checked});
+            else {
+                const item=await api(path,'POST',{name});
+                if($('edit-item-completed-check').checked)await api(`${path}/${item.id}`,'PATCH',{completed:true});
+            }
+            close('item-edit-modal');await loadLists();
+        }catch(error){alert(error.message);}
+    };
+    $('retry-lists-btn').onclick=loadLists;
     loadLists();
 });
-
-// Escape HTML utility
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}

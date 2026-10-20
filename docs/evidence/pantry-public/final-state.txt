@@ -1,0 +1,4 @@
+.env
+Secret file permissions: 0o600
+Status=running RestartCount=0 RestartPolicy=unless-stopped
+Readiness: 200 {'status': 200, 'readyConnections': 4, 'connectorId': '06810374-c131-492a-8f44-7209f5f6deb8'}

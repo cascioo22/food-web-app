@@ -1,8 +1,5 @@
 FROM python:3.11-slim
 
-# Suppress SQLAlchemy warnings
-ENV PYTHONWARNINGS=ignore::sqlalchemy.exc.SAWarning
-
 WORKDIR /app
 
 # Install dependencies
