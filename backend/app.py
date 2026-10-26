@@ -1,9 +1,9 @@
 """Food Webapp FastAPI backend with recipe and nutrition support."""
-from fastapi import FastAPI, Depends, HTTPException, status, File, Form, UploadFile
+from fastapi import FastAPI, Depends, HTTPException, status, File, Form, UploadFile, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import List, Optional, TYPE_CHECKING
 from contextlib import contextmanager
 
@@ -36,6 +36,13 @@ engine = create_engine(
     connect_args={"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
 )
 
+if engine.dialect.name == 'sqlite':
+    from sqlalchemy import event
+    @event.listens_for(engine, 'connect')
+    def sqlite_integrity(connection, _):
+        connection.execute('PRAGMA foreign_keys=ON')
+        connection.execute('PRAGMA busy_timeout=10000')
+
 SessionLocal = lambda: Session(engine)
 
 Base = declarative_base()
@@ -57,6 +64,12 @@ class Recipe(Base):
     prep_time = Column(String(200), default="")
     servings = Column(String(200), default="")
     category = Column(String(200), default="")
+    description = Column(Text, default="")
+    cook_time = Column(String(200), default="")
+    notes = Column(Text, default="")
+    favorite = Column(Boolean, default=False)
+    cover_photo_id = Column(Integer, nullable=True)
+    last_cooked_at = Column(String, nullable=True)
 
     @property
     def title(self):
@@ -114,6 +127,8 @@ class GroceryList(Base):
     __tablename__ = "grocery_lists"
     id = Column(Integer, primary_key=True)
     name = Column(String(500), nullable=False)
+    position = Column(Integer, default=0, nullable=False)
+    revision = Column(Integer, default=0, nullable=False)
 
 
 class GroceryItem(Base):
@@ -122,6 +137,27 @@ class GroceryItem(Base):
     list_id = Column(Integer, ForeignKey("grocery_lists.id"), nullable=False)
     name = Column(String(1000), nullable=False)
     completed = Column(Boolean, default=False)
+    position = Column(Integer, default=0, nullable=False)
+    version = Column(Integer, default=0, nullable=False)
+    quantity = Column(String(200), default="")
+    unit = Column(String(200), default="")
+    category = Column(String(200), default="")
+    notes = Column(String(2000), default="")
+    deleted_at = Column(String, nullable=True)
+
+
+class MutationReceipt(Base):
+    __tablename__ = "mutation_receipts"
+    key = Column(String(100), primary_key=True)
+    payload = Column(Text, nullable=False)
+    result = Column(Text, nullable=False)
+
+
+class RecordSequence(Base):
+    """Durable identity high-water marks, including legacy SQLite tables."""
+    __tablename__ = 'record_sequences'
+    name = Column(String(100), primary_key=True)
+    value = Column(Integer, nullable=False)
 
 
 def get_db():
@@ -212,6 +248,13 @@ class RecipeResponse(BaseModel):
     prep_time: str = ""
     servings: str = ""
     category: str = ""
+    description: str = ""
+    cook_time: str = ""
+    notes: str = ""
+    favorite: bool = False
+    cover_photo_id: Optional[int] = None
+    cover_url: Optional[str] = None
+    last_cooked_at: Optional[str] = None
     url: Optional[str]
     manual_entry: Optional[str]
     source: str
@@ -236,6 +279,24 @@ class IngredientModel(Base):
     name = Column(String, nullable=False)
     amount = Column(String, default="")
     checked = Column(Boolean, default=False)
+
+
+from sqlalchemy import event, text as sql_text
+
+
+def assign_durable_id(mapper, connection, target):
+    if connection.dialect.name != 'sqlite' or target.id is not None:
+        return
+    table = target.__tablename__  # Static model-owned name, never request input.
+    target.id = connection.execute(sql_text(
+        f"INSERT INTO record_sequences (name, value) "
+        f"SELECT :name, COALESCE(MAX(id), 0) + 1 FROM {table} WHERE 1 "
+        "ON CONFLICT(name) DO UPDATE SET value = MAX(record_sequences.value + 1, excluded.value) RETURNING value"
+    ), {'name': table}).scalar_one()
+
+
+for identity_model in (Recipe, Nutrition, Photo, GroceryList, GroceryItem, IngredientModel):
+    event.listen(identity_model, 'before_insert', assign_durable_id)
 
 
 class GroceryListCreate(BaseModel):
@@ -438,8 +499,8 @@ app = FastAPI(title="Food Webapp API", version="1.0.0")
 # Add CORS middleware for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
-    allow_credentials=True,
+    allow_origins=[origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -447,15 +508,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup():
-    """Create tables on startup."""
-    Base.metadata.create_all(bind=engine)
-    # Add missing columns to existing SQLite installs without dropping data.
-    from sqlalchemy import inspect, text
-    existing = {col["name"] for col in inspect(engine).get_columns("recipes")}
-    with engine.begin() as connection:
-        for field in ("ingredients_text", "steps_ordered", "prep_time", "servings", "category"):
-            if field not in existing:
-                connection.execute(text(f"ALTER TABLE recipes ADD COLUMN {field} TEXT NOT NULL DEFAULT ''"))
+    from migrations import migrate
+    migrate(engine, Base.metadata)
 
 
 @app.get("/")
@@ -521,6 +575,7 @@ async def upload_photo(image: Optional[UploadFile] = File(None), image_data: Opt
         filename = uuid.uuid4().hex + ".jpg"
         thumb = "thumb_" + filename
         try:
+            clean.thumbnail((2400, 2400))
             clean.save(directory / filename, "JPEG", quality=90)
             thumbnail = clean.copy()
             thumbnail.thumbnail((400, 400))
@@ -564,6 +619,8 @@ def get_photo(identifier: str):
 def update_photo(identifier: str, data: dict):
     with SessionLocal() as db:
         photo = find_photo(db, identifier)
+        if 'recipe_id' in data and data['recipe_id'] != photo.recipe_id:
+            db.query(Recipe).filter_by(cover_photo_id=photo.id).update({'cover_photo_id': None})
         if "caption" in data:
             photo.caption = str(data["caption"] or "")[:1000]
         if "recipe_id" in data:
@@ -580,11 +637,41 @@ def delete_photo_endpoint(identifier: str):
     with SessionLocal() as db:
         photo = find_photo(db, identifier)
         directory = Path(PHOTO_UPLOAD_DIR)
-        (directory / Path(photo.filename).name).unlink(missing_ok=True)
+        paths = [directory / Path(photo.filename).name]
         if photo.thumbnail_filename:
-            (directory / "thumbnails" / Path(photo.thumbnail_filename).name).unlink(missing_ok=True)
+            paths.append(directory / 'thumbnails' / Path(photo.thumbnail_filename).name)
+        db.query(Recipe).filter_by(cover_photo_id=photo.id).update({'cover_photo_id': None})
         db.delete(photo)
         db.commit()
+        # DB success precedes file cleanup: a failed transaction cannot erase a live image.
+        for path in paths:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                import logging
+                logging.getLogger(__name__).warning('Orphan photo file needs cleanup: %s', path.name)
+
+
+class RecipeWrite(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=500)
+    title: Optional[str] = Field(default=None, max_length=500)
+    url: Optional[str] = Field(default=None, max_length=1024)
+    original_url: Optional[str] = Field(default=None, max_length=1024)
+    manual_entry: Optional[str] = Field(default=None, max_length=100000)
+    source: str = 'manual'
+    instructions_ordered: bool = True
+    ingredients_text: str = Field(default='', max_length=100000)
+    steps_ordered: str = Field(default='', max_length=100000)
+    prep_time: str = Field(default='', max_length=200)
+    cook_time: str = Field(default='', max_length=200)
+    servings: str = Field(default='', max_length=200)
+    category: str = Field(default='', max_length=200)
+    description: str = Field(default='', max_length=10000)
+    notes: str = Field(default='', max_length=10000)
+    favorite: Optional[bool] = None
+    cover_photo_id: Optional[int] = None
+    last_cooked_at: Optional[str] = Field(default=None, max_length=100)
+    nutrition: Optional[NutritionCreate] = None
 
 
 # Recipe CRUD endpoints
@@ -596,6 +683,8 @@ def get_recipes():
         recipes = []
         for recipe in db.query(Recipe).all():
             recipe_obj = RecipeResponse.model_validate(recipe)
+            cover = db.get(Photo, recipe.cover_photo_id) if recipe.cover_photo_id else db.query(Photo).filter_by(recipe_id=recipe.id).order_by(Photo.id.desc()).first()
+            recipe_obj.cover_url = photo_dict(cover)["thumbnail_url"] or photo_dict(cover)["url"] if cover and cover.recipe_id == recipe.id else None
             
             # Try to include nutrition
             try:
@@ -630,14 +719,15 @@ def get_recipe(recipe_id: int):
 
 
 @app.post("/recipes", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
-def create_recipe(recipe_data: dict):
+def create_recipe(recipe_data: RecipeWrite):
+    recipe_data = recipe_data.model_dump(exclude_unset=True)
     """Create a new recipe from imported data."""
     with SessionLocal() as db:
         try:
             # Extract fields with defaults
             name = recipe_data.get("name") or recipe_data.get("title")
             
-            if not name:
+            if not isinstance(name, str) or not name.strip() or len(name) > 500:
                 raise HTTPException(
                     status_code=400, 
                     detail="Recipe name or title is required"
@@ -656,9 +746,16 @@ def create_recipe(recipe_data: dict):
                 source=source,
                 original_url=original_url,
                 instructions_ordered=instructions_ordered,
-                **{field: recipe_data.get(field, "") for field in ("ingredients_text", "steps_ordered", "prep_time", "servings", "category")}
+                **{field: recipe_data.get(field, "") for field in ("ingredients_text", "steps_ordered", "prep_time", "servings", "category", "description", "cook_time", "notes")}
             )
             db.add(db_recipe)
+            db.flush()
+            if recipe_data.get('nutrition'):
+                nutrition_data = NutritionCreate(**recipe_data['nutrition'])
+                validation = validate_nutrition_data(nutrition_data)
+                if not validation['valid']:
+                    raise HTTPException(400, 'Nutrition values must be nonnegative and finite')
+                db.add(Nutrition(recipe_id=db_recipe.id, **nutrition_data.model_dump()))
             db.commit()
             db.refresh(db_recipe)
             
@@ -671,7 +768,8 @@ def create_recipe(recipe_data: dict):
 
 
 @app.put("/recipes/{recipe_id}", response_model=RecipeResponse)
-def update_recipe(recipe_id: int, recipe_update: dict):
+def update_recipe(recipe_id: int, recipe_update: RecipeWrite):
+    recipe_update = recipe_update.model_dump(exclude_unset=True)
     """Update a recipe."""
     with SessionLocal() as db:
         try:
@@ -685,12 +783,20 @@ def update_recipe(recipe_id: int, recipe_update: dict):
                 recipe_update["name"] = recipe_update["title"]
             if "name" in recipe_update and not str(recipe_update["name"]).strip():
                 raise HTTPException(status_code=400, detail="Recipe title is required")
-            for field in ["name", "url", "manual_entry", "instructions_ordered", "ingredients_text", "steps_ordered", "prep_time", "servings", "category"]:
+            for field in ["name", "url", "manual_entry", "instructions_ordered", "ingredients_text", "steps_ordered", "prep_time", "servings", "category", "description", "cook_time", "notes", "favorite", "original_url", "cover_photo_id", "last_cooked_at"]:
                 value = recipe_update.get(field)
                 if value is not None:
                     updates[field] = value
             
-            # source and original_url are typically not updated via API
+            if "cover_photo_id" in recipe_update:
+                cover_id = recipe_update["cover_photo_id"]
+                cover = db.get(Photo, cover_id) if cover_id else None
+                if cover_id and (not cover or cover.recipe_id != recipe_id):
+                    raise HTTPException(400, "Choose a photo associated with this recipe")
+                recipe.cover_photo_id = cover_id
+            if "favorite" in recipe_update and not isinstance(recipe_update["favorite"], bool):
+                raise HTTPException(400, "favorite must be boolean")
+            # Source attribution remains editable without fetching the URL.
             if updates:
                 for key, value in updates.items():
                     setattr(recipe, key, value)
@@ -741,12 +847,13 @@ def import_recipe_url(data: dict):
 
 
 @app.post("/recipes/manual-entry/save", response_model=RecipeResponse, status_code=201)
-def save_manual_recipe(data: dict):
+def save_manual_recipe(data: RecipeWrite):
+    data = data.model_dump(exclude_unset=True)
     if not str(data.get("title") or data.get("name") or "").strip():
         raise HTTPException(status_code=400, detail="Recipe title is required")
     data["source"] = "import" if data.get("original_url") else "manual"
     data["instructions_ordered"] = True
-    return create_recipe(data)
+    return create_recipe(RecipeWrite(**data))
 
 
 @app.get("/recipes/{recipe_id}/ingredients", response_model=list[dict])
@@ -777,18 +884,20 @@ def add_recipe_ingredients_to_list(recipe_id: int, request: RecipeIngredientsReq
         raise HTTPException(status_code=400, detail="Unknown ingredient selection")
     selected = [i for i in ingredients if not request.ingredient_ids or i["id"] in request.ingredient_ids]
     with SessionLocal() as db:
+        locked_db(db)
         require_record(db, GroceryList, request.grocery_list_id)
-        existing = {i.name.casefold().strip() for i in db.query(GroceryItem).filter_by(list_id=request.grocery_list_id)}
+        existing = {i.name.casefold().strip() for i in active_items(db, request.grocery_list_id)}
         added, skipped = [], 0
         for ingredient in selected:
             name = ingredient["name"]
             if name.casefold().strip() in existing:
                 skipped += 1
                 continue
-            item = GroceryItem(list_id=request.grocery_list_id, name=name, completed=False)
+            item = GroceryItem(list_id=request.grocery_list_id, name=name, completed=False, position=next_position(db, GroceryItem, request.grocery_list_id) + len(added))
             db.add(item)
             added.append(item)
             existing.add(name.casefold().strip())
+        require_record(db, GroceryList, request.grocery_list_id).revision += 1
         db.commit()
         return {"success": True, "added_count": len(added), "skipped_duplicates": skipped,
                 "items_added": [item_dict(i) for i in added]}
@@ -951,90 +1060,342 @@ def required_name(data):
     return name
 
 
+class NamedRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=500)
+
+    @field_validator('name')
+    @classmethod
+    def clean_name(cls, value):
+        if not value.strip():
+            raise ValueError('Enter a name')
+        return value.strip()
+
+
+class ItemCreate(NamedRequest):
+    name: str = Field(min_length=1, max_length=1000)
+    quantity: str = Field(default='', max_length=200)
+    unit: str = Field(default='', max_length=200)
+    category: str = Field(default='', max_length=200)
+    notes: str = Field(default='', max_length=2000)
+    completed: bool = False
+
+
+class ItemUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=1000)
+    completed: Optional[bool] = None
+    quantity: Optional[str] = Field(default=None, max_length=200)
+    unit: Optional[str] = Field(default=None, max_length=200)
+    category: Optional[str] = Field(default=None, max_length=200)
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    expected_version: Optional[int] = None
+
+
+class OrderRequest(BaseModel):
+    ids: list[int] = Field(max_length=10000)
+    expected_ids: Optional[list[int]] = None
+    expected_revision: Optional[int] = None
+
+
+class BulkItems(BaseModel):
+    items: list[ItemCreate] = Field(min_length=1, max_length=500)
+    operation_id: str = Field(min_length=1, max_length=100)
+    duplicate_policy: str = 'keep'
+
+    @field_validator('duplicate_policy')
+    @classmethod
+    def policy(cls, value):
+        if value not in ('keep', 'merge'):
+            raise ValueError('Choose keep or merge')
+        return value
+
+
+class TransferItems(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=500)
+    target_list_id: int
+    copy_items: bool = Field(default=False, alias='copy')
+    expected_revision: int
+
+
+class RevisionRequest(BaseModel):
+    expected_revision: int
+
+
+def locked_db(db):
+    # Serialize SQLite read-modify-write sequences, including revision checks.
+    if engine.dialect.name == 'sqlite':
+        db.connection().exec_driver_sql('BEGIN IMMEDIATE')
+
+
+def next_position(db, model, list_id=None):
+    query = db.query(func.max(model.position))
+    if list_id is not None:
+        query = query.filter(model.list_id == list_id)
+    value = query.scalar()
+    return (value if value is not None else -1) + 1
+
+
+def active_items(db, list_id):
+    return db.query(GroceryItem).filter_by(list_id=list_id, deleted_at=None).order_by(GroceryItem.position, GroceryItem.id).all()
+
+
 def item_dict(item):
-    return {"id": item.id, "name": item.name, "completed": item.completed}
+    return {key: getattr(item, key) for key in ('id','name','completed','position','version','quantity','unit','category','notes')}
 
 
 def list_dict(db, record):
-    return {"id": record.id, "name": record.name,
-            "items": [item_dict(i) for i in db.query(GroceryItem).filter_by(list_id=record.id).order_by(GroceryItem.id)]}
+    return {'id': record.id, 'name': record.name, 'position': record.position, 'revision': record.revision,
+            'items': [item_dict(i) for i in active_items(db, record.id)]}
 
 
-@app.get("/grocery-lists")
+def check_revision(record, expected):
+    if expected is not None and record.revision != expected:
+        raise HTTPException(409, 'This list changed elsewhere. Refresh it before trying again; your input has been kept.')
+
+
+def validate_order(ids, records):
+    if len(ids) != len(set(ids)) or set(ids) != {r.id for r in records}:
+        raise HTTPException(409, 'The contents changed. Refresh before reordering.')
+
+
+@app.get('/grocery-lists')
 def get_grocery_lists():
     with SessionLocal() as db:
-        return [list_dict(db, record) for record in db.query(GroceryList).order_by(GroceryList.id)]
+        return [list_dict(db, r) for r in db.query(GroceryList).order_by(GroceryList.position, GroceryList.id)]
 
 
-@app.post("/grocery-lists", status_code=201)
-def create_grocery_list(data: dict):
+# Register static paths before /{list_id}.
+@app.put('/grocery-lists/order')
+def reorder_lists(data: OrderRequest):
     with SessionLocal() as db:
-        record = GroceryList(name=required_name(data))
+        locked_db(db)
+        records = db.query(GroceryList).order_by(GroceryList.position, GroceryList.id).all()
+        validate_order(data.ids, records)
+        if data.expected_ids is not None and data.expected_ids != [r.id for r in records]:
+            raise HTTPException(409, 'List order changed elsewhere. Refresh before moving it again.')
+        for record in records:
+            record.position = data.ids.index(record.id)
+        db.commit()
+        return {'ids': data.ids}
+
+
+@app.post('/grocery-lists', status_code=201)
+def create_grocery_list(data: NamedRequest):
+    with SessionLocal() as db:
+        locked_db(db)
+        record = GroceryList(name=data.name, position=next_position(db, GroceryList))
         db.add(record)
         db.commit()
         return list_dict(db, record)
 
 
-@app.get("/grocery-lists/{list_id}")
+@app.get('/grocery-lists/{list_id}')
 def get_grocery_list(list_id: int):
     with SessionLocal() as db:
         return list_dict(db, require_record(db, GroceryList, list_id))
 
 
-@app.patch("/grocery-lists/{list_id}")
-@app.put("/grocery-lists/{list_id}")
-def rename_grocery_list(list_id: int, data: dict):
+@app.patch('/grocery-lists/{list_id}')
+@app.put('/grocery-lists/{list_id}')
+def rename_grocery_list(list_id: int, data: NamedRequest):
     with SessionLocal() as db:
+        locked_db(db)
         record = require_record(db, GroceryList, list_id)
-        record.name = required_name(data)
+        record.name = data.name
+        record.revision += 1
         db.commit()
         return list_dict(db, record)
 
 
-@app.delete("/grocery-lists/{list_id}", status_code=204)
+@app.delete('/grocery-lists/{list_id}', status_code=204)
 def remove_grocery_list(list_id: int):
     with SessionLocal() as db:
+        locked_db(db)
         record = require_record(db, GroceryList, list_id)
         db.query(GroceryItem).filter_by(list_id=list_id).delete()
         db.delete(record)
         db.commit()
 
 
-@app.post("/grocery-lists/{list_id}/items", status_code=201)
-def create_grocery_item(list_id: int, data: dict):
+@app.post('/grocery-lists/{list_id}/duplicate', status_code=201)
+def duplicate_list(list_id: int):
     with SessionLocal() as db:
-        require_record(db, GroceryList, list_id)
-        item = GroceryItem(list_id=list_id, name=required_name(data), completed=False)
+        locked_db(db)
+        source = require_record(db, GroceryList, list_id)
+        copy = GroceryList(name=source.name + ' (copy)', position=next_position(db, GroceryList))
+        db.add(copy)
+        db.flush()
+        for i in active_items(db, list_id):
+            db.add(GroceryItem(list_id=copy.id, **{k: getattr(i,k) for k in ('name','quantity','unit','category','notes','position')}, completed=False))
+        db.commit()
+        return list_dict(db, copy)
+
+
+@app.put('/grocery-lists/{list_id}/items/order')
+def reorder_items(list_id: int, data: OrderRequest):
+    with SessionLocal() as db:
+        locked_db(db)
+        record = require_record(db, GroceryList, list_id)
+        check_revision(record, data.expected_revision)
+        items = active_items(db, list_id)
+        validate_order(data.ids, items)
+        for item in items:
+            item.position = data.ids.index(item.id)
+            item.version += 1
+        record.revision += 1
+        db.commit()
+        return list_dict(db, record)
+
+
+@app.post('/grocery-lists/{list_id}/items/bulk', status_code=201)
+def bulk_items(list_id: int, data: BulkItems):
+    import json
+    with SessionLocal() as db:
+        locked_db(db)
+        payload = json.dumps({'list_id': list_id, **data.model_dump()}, sort_keys=True)
+        record = require_record(db, GroceryList, list_id)
+        receipt = db.get(MutationReceipt, data.operation_id)
+        if receipt:
+            if receipt.payload != payload:
+                raise HTTPException(409, 'This operation ID was already used for different items')
+            return json.loads(receipt.result)
+        existing = active_items(db, list_id)
+        position = next_position(db, GroceryItem, list_id)
+        merged = 0
+        for offset, entry in enumerate(data.items):
+            fields = entry.model_dump()
+            match = next((i for i in existing if i.name.casefold().strip() == entry.name.casefold().strip()
+                          and i.unit.casefold() == entry.unit.casefold() and i.category == entry.category and i.notes == entry.notes), None)
+            # Never guess freeform measurements. Merge only numeric compatible quantities.
+            if match and data.duplicate_policy == 'merge' and match.quantity and entry.quantity:
+                from decimal import Decimal, InvalidOperation
+                try:
+                    first, second = Decimal(match.quantity), Decimal(entry.quantity)
+                    if first.is_finite() and second.is_finite() and first >= 0 and second >= 0:
+                        match.quantity = format(first + second, 'f')
+                        match.completed = False
+                        match.version += 1
+                        merged += 1
+                        continue
+                except InvalidOperation:
+                    pass
+            item = GroceryItem(list_id=list_id, position=position + offset, **fields)
+            db.add(item)
+            existing.append(item)
+        record.revision += 1
+        db.flush()
+        result = {'list': list_dict(db, record), 'added_count': len(data.items) - merged, 'merged_count': merged}
+        db.add(MutationReceipt(key=data.operation_id, payload=payload, result=json.dumps(result)))
+        db.commit()
+        return result
+
+
+@app.post('/grocery-lists/{list_id}/items', status_code=201)
+def create_grocery_item(list_id: int, data: ItemCreate):
+    with SessionLocal() as db:
+        locked_db(db)
+        record = require_record(db, GroceryList, list_id)
+        item = GroceryItem(list_id=list_id, position=next_position(db, GroceryItem, list_id), **data.model_dump())
         db.add(item)
+        record.revision += 1
         db.commit()
         return item_dict(item)
 
 
-@app.patch("/grocery-lists/{list_id}/items/{item_id}")
-@app.put("/grocery-lists/{list_id}/items/{item_id}")
-def update_grocery_item(list_id: int, item_id: int, data: dict):
+@app.patch('/grocery-lists/{list_id}/items/{item_id}')
+@app.put('/grocery-lists/{list_id}/items/{item_id}')
+def update_grocery_item(list_id: int, item_id: int, data: ItemUpdate):
     with SessionLocal() as db:
+        locked_db(db)
         item = require_record(db, GroceryItem, item_id)
-        if item.list_id != list_id:
-            raise HTTPException(status_code=404, detail="Item not found in this list")
-        if "name" in data:
-            item.name = required_name(data)
-        if "completed" in data:
-            if not isinstance(data["completed"], bool):
-                raise HTTPException(status_code=400, detail="completed must be boolean")
-            item.completed = data["completed"]
+        if item.list_id != list_id or item.deleted_at:
+            raise HTTPException(404, 'Item not found in this list')
+        if data.expected_version is not None and data.expected_version != item.version:
+            raise HTTPException(409, 'This item changed elsewhere. Refresh before saving; your input has been kept.')
+        for key, value in data.model_dump(exclude_unset=True, exclude={'expected_version'}).items():
+            if value is None:
+                raise HTTPException(400, f'{key} cannot be null')
+            if key == 'name' and not value.strip():
+                raise HTTPException(400, 'Enter an item name')
+            setattr(item, key, value.strip() if key == 'name' else value)
+        item.version += 1
+        require_record(db, GroceryList, list_id).revision += 1
         db.commit()
         return item_dict(item)
 
 
-@app.delete("/grocery-lists/{list_id}/items/{item_id}", status_code=204)
+@app.delete('/grocery-lists/{list_id}/items/{item_id}', status_code=204)
 def remove_grocery_item(list_id: int, item_id: int):
     with SessionLocal() as db:
+        locked_db(db)
         item = require_record(db, GroceryItem, item_id)
         if item.list_id != list_id:
-            raise HTTPException(status_code=404, detail="Item not found in this list")
-        db.delete(item)
+            raise HTTPException(404, 'Item not found in this list')
+        item.deleted_at = datetime.now(timezone.utc).isoformat()
+        item.version += 1
+        require_record(db, GroceryList, list_id).revision += 1
         db.commit()
+
+
+@app.post('/grocery-lists/{list_id}/restore')
+def restore_items(list_id: int, data: OrderRequest):
+    with SessionLocal() as db:
+        locked_db(db)
+        record = require_record(db, GroceryList, list_id)
+        items = db.query(GroceryItem).filter(GroceryItem.list_id == list_id, GroceryItem.id.in_(data.ids)).all()
+        if len(items) != len(set(data.ids)):
+            raise HTTPException(404, 'Items no longer belong to this list')
+        for item in items:
+            item.deleted_at = None
+            item.version += 1
+        record.revision += 1
+        db.commit()
+        return list_dict(db, record)
+
+
+@app.post('/grocery-lists/{list_id}/reset')
+@app.post('/grocery-lists/{list_id}/clear-completed')
+def completed_action(list_id: int, data: RevisionRequest, request: Request):
+    with SessionLocal() as db:
+        locked_db(db)
+        record = require_record(db, GroceryList, list_id)
+        check_revision(record, data.expected_revision)
+        completed = [i for i in active_items(db, list_id) if i.completed]
+        for item in completed:
+            if request.url.path.endswith('/reset'):
+                item.completed = False
+            else:
+                item.deleted_at = datetime.now(timezone.utc).isoformat()
+            item.version += 1
+        record.revision += 1
+        db.commit()
+        return {'list': list_dict(db, record), 'ids': [i.id for i in completed]}
+
+
+@app.post('/grocery-lists/{list_id}/transfer')
+def transfer_items(list_id: int, data: TransferItems):
+    with SessionLocal() as db:
+        locked_db(db)
+        source = require_record(db, GroceryList, list_id)
+        target = require_record(db, GroceryList, data.target_list_id)
+        check_revision(source, data.expected_revision)
+        if list_id == target.id:
+            raise HTTPException(400, 'Choose another list')
+        items = [i for i in active_items(db, list_id) if i.id in data.ids]
+        if len(items) != len(set(data.ids)):
+            raise HTTPException(409, 'Selected items changed. Refresh before transferring.')
+        position = next_position(db, GroceryItem, target.id)
+        for offset, item in enumerate(items):
+            if data.copy_items:
+                db.add(GroceryItem(list_id=target.id, position=position + offset,
+                    **{key: getattr(item,key) for key in ('name','quantity','unit','category','notes','completed')}))
+            else:
+                item.list_id = target.id
+                item.position = position + offset
+                item.version += 1
+        source.revision += 1
+        target.revision += 1
+        db.commit()
+        return list_dict(db, source)
 
 @app.get("/recipes/{recipe_id}/photos", response_model=list[dict])
 def get_recipe_photos(recipe_id: int):

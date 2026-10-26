@@ -1,0 +1,484 @@
+
+==================================== ERRORS ====================================
+_______________________ ERROR collecting manual_test.py ________________________
+/root/.local/lib/python3.12/site-packages/urllib3/connection.py:239: in _new_conn
+    sock = connection.create_connection(
+/root/.local/lib/python3.12/site-packages/urllib3/util/connection.py:85: in create_connection
+    raise err
+/root/.local/lib/python3.12/site-packages/urllib3/util/connection.py:73: in create_connection
+    sock.connect(sa)
+E   ConnectionRefusedError: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+/root/.local/lib/python3.12/site-packages/urllib3/connectionpool.py:793: in urlopen
+    response = self._make_request(
+/root/.local/lib/python3.12/site-packages/urllib3/connectionpool.py:499: in _make_request
+    conn.request(
+/root/.local/lib/python3.12/site-packages/urllib3/connection.py:567: in request
+    self.endheaders()
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/http/client.py:1381: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/http/client.py:1141: in _send_output
+    self.send(msg)
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/http/client.py:1085: in send
+    self.connect()
+/root/.local/lib/python3.12/site-packages/urllib3/connection.py:398: in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/urllib3/connection.py:254: in _new_conn
+    raise NewConnectionError(
+E   urllib3.exceptions.NewConnectionError: HTTPConnection(host='127.0.0.1', port=8000): Failed to establish a new connection: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+/root/.local/lib/python3.12/site-packages/requests/adapters.py:696: in send
+    resp = conn.urlopen(
+/root/.local/lib/python3.12/site-packages/urllib3/connectionpool.py:847: in urlopen
+    retries = retries.increment(
+/root/.local/lib/python3.12/site-packages/urllib3/util/retry.py:555: in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='127.0.0.1', port=8000): Max retries exceeded with url: /recipes (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=8000): Failed to establish a new connection: [Errno 111] Connection refused"))
+
+During handling of the above exception, another exception occurred:
+manual_test.py:40: in <module>
+    resp = requests.post(
+/root/.local/lib/python3.12/site-packages/requests/api.py:134: in post
+    return request("post", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/requests/api.py:71: in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/requests/sessions.py:651: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/requests/sessions.py:784: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/requests/adapters.py:729: in send
+    raise ConnectionError(e, request=request)
+E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='127.0.0.1', port=8000): Max retries exceeded with url: /recipes (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=8000): Failed to establish a new connection: [Errno 111] Connection refused"))
+------------------------------- Captured stdout --------------------------------
+
+======================================================================
+Manual Test: Importing recipe with string-formatted nutrition
+======================================================================
+___________________ ERROR collecting test_grocery_manual.py ____________________
+test_grocery_manual.py:57: in <module>
+    client = TestClient(app_module.app)
+             ^^^^^^^^^^
+E   NameError: name 'TestClient' is not defined
+___________________ ERROR collecting test_recipe_library.py ____________________
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: recipes
+
+The above exception was the direct cause of the following exception:
+test_recipe_library.py:17: in <module>
+    r = client.get('/recipes')
+        ^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/starlette/testclient.py:518: in get
+    return super().get(
+/root/.local/lib/python3.12/site-packages/httpx/_client.py:1053: in get
+    return self.request(
+/root/.local/lib/python3.12/site-packages/starlette/testclient.py:488: in request
+    return super().request(
+/root/.local/lib/python3.12/site-packages/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+/root/.local/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+/root/.local/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/starlette/testclient.py:381: in handle_request
+    raise exc
+/root/.local/lib/python3.12/site-packages/starlette/testclient.py:378: in handle_request
+    portal.call(self.app, scope, receive, send)
+/root/.local/lib/python3.12/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+/root/.local/lib/python3.12/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/fastapi/applications.py:1054: in __call__
+    await super().__call__(scope, receive, send)
+/root/.local/lib/python3.12/site-packages/starlette/applications.py:113: in __call__
+    await self.middleware_stack(scope, receive, send)
+/root/.local/lib/python3.12/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/root/.local/lib/python3.12/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/root/.local/lib/python3.12/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+/root/.local/lib/python3.12/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/root/.local/lib/python3.12/site-packages/starlette/_exception_handler.py:62: in wrapped_app
+    raise exc
+/root/.local/lib/python3.12/site-packages/starlette/_exception_handler.py:51: in wrapped_app
+    await app(scope, receive, sender)
+/root/.local/lib/python3.12/site-packages/starlette/routing.py:715: in __call__
+    await self.middleware_stack(scope, receive, send)
+/root/.local/lib/python3.12/site-packages/starlette/routing.py:735: in app
+    await route.handle(scope, receive, send)
+/root/.local/lib/python3.12/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/root/.local/lib/python3.12/site-packages/starlette/routing.py:76: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/root/.local/lib/python3.12/site-packages/starlette/_exception_handler.py:62: in wrapped_app
+    raise exc
+/root/.local/lib/python3.12/site-packages/starlette/_exception_handler.py:51: in wrapped_app
+    await app(scope, receive, sender)
+/root/.local/lib/python3.12/site-packages/starlette/routing.py:73: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/fastapi/routing.py:301: in app
+    raw_response = await run_endpoint_function(
+/root/.local/lib/python3.12/site-packages/fastapi/routing.py:214: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/starlette/concurrency.py:39: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/anyio/to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+/root/.local/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2706: in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:1100: in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app.py:597: in get_recipes
+    for recipe in db.query(Recipe).all():
+                  ^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2673: in all
+    return self._iter().all()  # type: ignore
+           ^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2362: in execute
+    return self._execute_internal(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/context.py:305: in orm_execute_statement
+    result = conn.execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1418: in execute
+    return meth(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: recipes
+E   [SQL: SELECT recipes.id AS recipes_id, recipes.name AS recipes_name, recipes.url AS recipes_url, recipes.manual_entry AS recipes_manual_entry, recipes.source AS recipes_source, recipes.original_url AS recipes_original_url, recipes.instructions_ordered AS recipes_instructions_ordered, recipes.ingredients_text AS recipes_ingredients_text, recipes.steps_ordered AS recipes_steps_ordered, recipes.prep_time AS recipes_prep_time, recipes.servings AS recipes_servings, recipes.category AS recipes_category, recipes.created_at AS recipes_created_at, recipes.updated_at AS recipes_updated_at 
+E   FROM recipes]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+------------------------------- Captured stdout --------------------------------
+✓ Root: 200 - {'service': 'food-webapp', 'version': '1.0.0'}
+_________________ ERROR collecting tests/test_backend_final.py _________________
+ImportError while importing test module '/workspace/scratch/ceb78d53d0bc/food-web-app/tests/test_backend_final.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_backend_final.py:3: in <module>
+    from app import Recipe, GroceryList, Photo, Ingredient, Base, get_db, app
+E   ImportError: cannot import name 'Ingredient' from 'app' (/workspace/scratch/ceb78d53d0bc/food-web-app/backend/app.py)
+_________________ ERROR collecting tests/test_backend_fixed.py _________________
+ImportError while importing test module '/workspace/scratch/ceb78d53d0bc/food-web-app/tests/test_backend_fixed.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_backend_fixed.py:3: in <module>
+    from app import Recipe, GroceryList, Photo, Ingredient, Base, get_db, app
+E   ImportError: cannot import name 'Ingredient' from 'app' (/workspace/scratch/ceb78d53d0bc/food-web-app/backend/app.py)
+_________________ ERROR collecting tests/test_backend_fw04.py __________________
+ImportError while importing test module '/workspace/scratch/ceb78d53d0bc/food-web-app/tests/test_backend_fw04.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_backend_fw04.py:7: in <module>
+    from app import (
+E   ImportError: cannot import name 'Ingredient' from 'app' (/workspace/scratch/ceb78d53d0bc/food-web-app/backend/app.py)
+________________ ERROR collecting tests/test_backend_minimal.py ________________
+ImportError while importing test module '/workspace/scratch/ceb78d53d0bc/food-web-app/tests/test_backend_minimal.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_backend_minimal.py:3: in <module>
+    from app import Recipe, GroceryList, Photo, Ingredient, Base, get_db, app
+E   ImportError: cannot import name 'Ingredient' from 'app' (/workspace/scratch/ceb78d53d0bc/food-web-app/backend/app.py)
+____________ ERROR collecting tests/test_nutrition_e2e_detailed.py _____________
+/root/.local/lib/python3.12/site-packages/urllib3/connection.py:239: in _new_conn
+    sock = connection.create_connection(
+/root/.local/lib/python3.12/site-packages/urllib3/util/connection.py:85: in create_connection
+    raise err
+/root/.local/lib/python3.12/site-packages/urllib3/util/connection.py:73: in create_connection
+    sock.connect(sa)
+E   ConnectionRefusedError: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+/root/.local/lib/python3.12/site-packages/urllib3/connectionpool.py:793: in urlopen
+    response = self._make_request(
+/root/.local/lib/python3.12/site-packages/urllib3/connectionpool.py:499: in _make_request
+    conn.request(
+/root/.local/lib/python3.12/site-packages/urllib3/connection.py:567: in request
+    self.endheaders()
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/http/client.py:1381: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/http/client.py:1141: in _send_output
+    self.send(msg)
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/http/client.py:1085: in send
+    self.connect()
+/root/.local/lib/python3.12/site-packages/urllib3/connection.py:398: in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/urllib3/connection.py:254: in _new_conn
+    raise NewConnectionError(
+E   urllib3.exceptions.NewConnectionError: HTTPConnection(host='127.0.0.1', port=8000): Failed to establish a new connection: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+/root/.local/lib/python3.12/site-packages/requests/adapters.py:696: in send
+    resp = conn.urlopen(
+/root/.local/lib/python3.12/site-packages/urllib3/connectionpool.py:847: in urlopen
+    retries = retries.increment(
+/root/.local/lib/python3.12/site-packages/urllib3/util/retry.py:555: in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='127.0.0.1', port=8000): Max retries exceeded with url: /nutrition (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=8000): Failed to establish a new connection: [Errno 111] Connection refused"))
+
+During handling of the above exception, another exception occurred:
+tests/test_nutrition_e2e_detailed.py:12: in <module>
+    resp = requests.get(f"{BASE_URL}/nutrition", timeout=5)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/requests/api.py:87: in get
+    return request("get", url, params=params, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/requests/api.py:71: in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/requests/sessions.py:651: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/requests/sessions.py:784: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/requests/adapters.py:729: in send
+    raise ConnectionError(e, request=request)
+E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='127.0.0.1', port=8000): Max retries exceeded with url: /nutrition (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=8000): Failed to establish a new connection: [Errno 111] Connection refused"))
+------------------------------- Captured stdout --------------------------------
+=== Clearing existing data ===
+________________ ERROR collecting tests/test_nutrition_save.py _________________
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: recipes
+
+The above exception was the direct cause of the following exception:
+tests/test_nutrition_save.py:12: in <module>
+    db.query(Recipe).delete()
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/query.py:3162: in delete
+    result: CursorResult[Any] = self.session.execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2362: in execute
+    return self._execute_internal(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/bulk_persistence.py:2021: in orm_execute_statement
+    return super().orm_execute_statement(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/context.py:305: in orm_execute_statement
+    result = conn.execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1418: in execute
+    return meth(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: recipes
+E   [SQL: DELETE FROM recipes]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+------------------------------- Captured stdout --------------------------------
+=== Clearing database ===
+_____________ ERROR collecting tests/test_nutrition_validation.py ______________
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.OperationalError: no such table: recipes
+
+The above exception was the direct cause of the following exception:
+tests/test_nutrition_validation.py:9: in <module>
+    recipes = db.query(Recipe).filter_by(id=2).first()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2728: in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/query.py:2827: in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2362: in execute
+    return self._execute_internal(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/orm/context.py:305: in orm_execute_statement
+    result = conn.execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1418: in execute
+    return meth(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+/root/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: recipes
+E   [SQL: SELECT recipes.id AS recipes_id, recipes.name AS recipes_name, recipes.url AS recipes_url, recipes.manual_entry AS recipes_manual_entry, recipes.source AS recipes_source, recipes.original_url AS recipes_original_url, recipes.instructions_ordered AS recipes_instructions_ordered, recipes.created_at AS recipes_created_at, recipes.updated_at AS recipes_updated_at 
+E   FROM recipes 
+E   WHERE recipes.id = ?
+E    LIMIT ? OFFSET ?]
+E   [parameters: (2, 1, 0)]
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+=============================== warnings summary ===============================
+backend/app_new.py:56
+  /workspace/scratch/ceb78d53d0bc/food-web-app/backend/app_new.py:56: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+backend/app_new.py:70
+  /workspace/scratch/ceb78d53d0bc/food-web-app/backend/app_new.py:70: SAWarning: Can't validate argument 'default_factory'; can't locate any SQLAlchemy dialect named 'default'
+    created_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc))
+
+backend/app_new.py:71
+  /workspace/scratch/ceb78d53d0bc/food-web-app/backend/app_new.py:71: SAWarning: Can't validate argument 'default_factory'; can't locate any SQLAlchemy dialect named 'default'
+    updated_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+backend/app_new.py:99
+  /workspace/scratch/ceb78d53d0bc/food-web-app/backend/app_new.py:99: SAWarning: Can't validate argument 'default_factory'; can't locate any SQLAlchemy dialect named 'default'
+    created_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc))
+
+backend/app_new.py:100
+  /workspace/scratch/ceb78d53d0bc/food-web-app/backend/app_new.py:100: SAWarning: Can't validate argument 'default_factory'; can't locate any SQLAlchemy dialect named 'default'
+    updated_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+backend/app_new.py:116
+  /workspace/scratch/ceb78d53d0bc/food-web-app/backend/app_new.py:116: SAWarning: Can't validate argument 'default_factory'; can't locate any SQLAlchemy dialect named 'default'
+    created_at = Column(DateTime, default_factory=lambda: datetime.now(timezone.utc))
+
+../../../../root/.local/lib/python3.12/site-packages/pydantic/_internal/_config.py:291
+../../../../root/.local/lib/python3.12/site-packages/pydantic/_internal/_config.py:291
+../../../../root/.local/lib/python3.12/site-packages/pydantic/_internal/_config.py:291
+../../../../root/.local/lib/python3.12/site-packages/pydantic/_internal/_config.py:291
+../../../../root/.local/lib/python3.12/site-packages/pydantic/_internal/_config.py:291
+../../../../root/.local/lib/python3.12/site-packages/pydantic/_internal/_config.py:291
+  /root/.local/lib/python3.12/site-packages/pydantic/_internal/_config.py:291: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.9/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+backend/app_new.py:290
+  /workspace/scratch/ceb78d53d0bc/food-web-app/backend/app_new.py:290: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+../../../../root/.local/lib/python3.12/site-packages/fastapi/applications.py:4495
+../../../../root/.local/lib/python3.12/site-packages/fastapi/applications.py:4495
+../../../../root/.local/lib/python3.12/site-packages/fastapi/applications.py:4495
+  /root/.local/lib/python3.12/site-packages/fastapi/applications.py:4495: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)
+
+backend/app.py:41
+backend/app.py:41
+  /workspace/scratch/ceb78d53d0bc/food-web-app/backend/app.py:41: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+backend/app.py:448
+backend/app.py:448
+  /workspace/scratch/ceb78d53d0bc/food-web-app/backend/app.py:448: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+test_nutrition_fix.py:5
+  /workspace/scratch/ceb78d53d0bc/food-web-app/test_nutrition_fix.py:5: GuessedAtParserWarning: No parser was explicitly specified, so I'm using the best available HTML parser for this system ("lxml"). This usually isn't a problem, but if you run this code on another system, or in a different virtual environment, it may use a different parser and behave differently.
+  
+  The code that caused this warning is on line 5 of the file /workspace/scratch/ceb78d53d0bc/food-web-app/test_nutrition_fix.py. To get rid of this warning, pass the additional argument 'features="lxml"' to the BeautifulSoup constructor.
+  
+    result = extract_nutrition_json_ld(BeautifulSoup(html))
+
+../../../../root/.local/lib/python3.12/site-packages/starlette/testclient.py:40
+  /root/.local/lib/python3.12/site-packages/starlette/testclient.py:40: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+tests/test_nutrition_fix.py:5
+  /workspace/scratch/ceb78d53d0bc/food-web-app/tests/test_nutrition_fix.py:5: GuessedAtParserWarning: No parser was explicitly specified, so I'm using the best available HTML parser for this system ("lxml"). This usually isn't a problem, but if you run this code on another system, or in a different virtual environment, it may use a different parser and behave differently.
+  
+  The code that caused this warning is on line 5 of the file /workspace/scratch/ceb78d53d0bc/food-web-app/tests/test_nutrition_fix.py. To get rid of this warning, pass the additional argument 'features="lxml"' to the BeautifulSoup constructor.
+  
+    result = extract_nutrition_json_ld(BeautifulSoup(html))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR manual_test.py - requests.exceptions.ConnectionError: HTTPConnectionPoo...
+ERROR test_grocery_manual.py - NameError: name 'TestClient' is not defined
+ERROR test_recipe_library.py - sqlalchemy.exc.OperationalError: (sqlite3.Oper...
+ERROR tests/test_backend_final.py
+ERROR tests/test_backend_fixed.py
+ERROR tests/test_backend_fw04.py
+ERROR tests/test_backend_minimal.py
+ERROR tests/test_nutrition_e2e_detailed.py - requests.exceptions.ConnectionEr...
+ERROR tests/test_nutrition_save.py - sqlalchemy.exc.OperationalError: (sqlite...
+ERROR tests/test_nutrition_validation.py - sqlalchemy.exc.OperationalError: (...
+!!!!!!!!!!!!!!!!!!! Interrupted: 10 errors during collection !!!!!!!!!!!!!!!!!!!
+23 warnings, 10 errors in 3.13s

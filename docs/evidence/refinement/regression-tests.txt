@@ -1,0 +1,9 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.14, pytest-9.1.1, pluggy-1.7.0
+cachedir: .pytest_cache_old
+rootdir: /workspace/scratch/ceb78d53d0bc/food-web-app/tests
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collected 14 items
+
+tests/test_refinement.py ......
