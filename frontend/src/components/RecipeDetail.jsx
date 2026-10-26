@@ -33,6 +33,7 @@ import { scaleIngredient } from "../lib/foodMath";
 import { ActionButton, ErrorText, Overflow, useUI } from "../components/UI";
 import Transfer from "../components/Transfer";
 import PhotoUpload from "../components/PhotoUpload";
+import { mealCategory } from "../lib/mealCategories";
 import { pastelColors } from "../components/FoodIllustration";
 const nutritionFields = [
   ["calories", "Calories", "kcal"],
@@ -136,10 +137,10 @@ export default function RecipeDetail({ recipe, onDelete, onFavorite }) {
             minWidth: 0,
           }}
         >
-          {recipe.category && (
+          {mealCategory(recipe.category) && (
             <Chip
               size="small"
-              label={recipe.category}
+              label={mealCategory(recipe.category)}
               sx={{
                 mb: 1.25,
                 bgcolor: "#EFE9F8",

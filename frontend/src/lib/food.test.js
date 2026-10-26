@@ -75,3 +75,20 @@ test("API exposes error status for conflict recovery and keeps meaningful text",
     global.fetch = previous;
   }
 });
+
+test("meal categories normalize imports without guessing or losing source values", async () => {
+  const { mealCategory, mealCategories, mealIllustration } =
+    await import("./mealCategories.js");
+  assert.deepEqual(mealCategories, ["Breakfast", "Lunch", "Dinner", "Dessert"]);
+  for (const [raw, expected] of [
+    ["breakfast, brunch, dessert", "Breakfast"],
+    ["Main Course", "Dinner"],
+    ["desert", "Dessert"],
+    ["Chili", ""],
+    [null, ""],
+  ]) {
+    assert.equal(mealCategory(raw), expected);
+  }
+  assert.equal(mealIllustration("Dinner"), mealIllustration("supper"));
+  assert.notEqual(mealIllustration("Breakfast"), mealIllustration("Dessert"));
+});

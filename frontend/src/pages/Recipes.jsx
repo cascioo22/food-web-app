@@ -30,11 +30,18 @@ import { ErrorText, Overflow, PageTitle, State, useUI } from "../components/UI";
 import RecipeEditor from "../components/RecipeEditor";
 import FoodIllustration, { pastelColors } from "../components/FoodIllustration";
 import RecipeDetail from "../components/RecipeDetail";
+import {
+  mealCategories,
+  mealCategory,
+  mealIllustration,
+} from "../lib/mealCategories";
 export default function Recipes() {
   const { recipes, loading, errors, reload, route, navigate } = useData(),
     ui = useUI();
   const [query, setQuery] = useState(route.params.get("q") || ""),
-    [category, setCategory] = useState(route.params.get("category") || ""),
+    [category, setCategory] = useState(
+      mealCategory(route.params.get("category")),
+    ),
     [sort, setSort] = useState(route.params.get("sort") || "recent"),
     [onlyFavorites, setOnlyFavorites] = useState(false),
     [error, setError] = useState("");
@@ -42,14 +49,12 @@ export default function Recipes() {
     editId = Number(route.params.get("edit")),
     creating = route.params.has("new"),
     recipe = recipes.find((r) => r.id === (editId || recipeId));
-  const categories = [
-    ...new Set(recipes.map((r) => r.category).filter(Boolean)),
-  ].sort();
+  const categories = mealCategories;
   const filtered = useMemo(() => {
     const value = recipes.filter(
       (r) =>
         (!onlyFavorites || r.favorite) &&
-        (!category || r.category === category) &&
+        (!category || mealCategory(r.category) === category) &&
         [r.title, r.ingredients_text, r.category, r.notes, r.description]
           .join(" ")
           .toLocaleLowerCase()
@@ -331,7 +336,7 @@ export default function Recipes() {
           gap: 2,
         }}
       >
-        {filtered.map((r, index) => (
+        {filtered.map((r) => (
           <Card
             key={r.id}
             variant="outlined"
@@ -360,6 +365,7 @@ export default function Recipes() {
                   minWidth: 0,
                   display: "flex",
                   textAlign: "left",
+                  justifyContent: "flex-start",
                   alignItems: "center",
                   p: 2,
                   gap: 1.75,
@@ -386,12 +392,15 @@ export default function Recipes() {
                       height: 90,
                       display: "grid",
                       placeItems: "center",
-                      bgcolor: pastelColors[r.id % 6],
+                      bgcolor: pastelColors[mealIllustration(r.category)],
                       borderRadius: 2.5,
                       flexShrink: 0,
                     }}
                   >
-                    <FoodIllustration kind={r.id % 6} size={78} />
+                    <FoodIllustration
+                      kind={mealIllustration(r.category)}
+                      size={78}
+                    />
                   </Box>
                 )}
                 <Box
@@ -402,7 +411,7 @@ export default function Recipes() {
                     pr: 2.5,
                   }}
                 >
-                  {r.category && (
+                  {mealCategory(r.category) && (
                     <Typography
                       variant="caption"
                       sx={{
@@ -411,7 +420,7 @@ export default function Recipes() {
                         mb: 0.5,
                       }}
                     >
-                      {r.category}
+                      {mealCategory(r.category)}
                     </Typography>
                   )}
                   <Typography
