@@ -1,0 +1,4 @@
+python -m py_compile backend/app.py backend/migrations.py backend/import_service.py tests/serve_react.py
+PASS
+
+Repository-wide compileall additionally encounters a pre-existing IndentationError in inactive backend/app_fixed.py. That legacy file is unchanged and is not imported by the active API.

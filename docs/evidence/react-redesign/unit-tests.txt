@@ -1,0 +1,19 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> pantry-frontend@1.0.0 test
+> node --test src/lib/*.test.js
+
+✔ default export excludes purchased and preserves backend order (0.920732ms)
+✔ export settings retain optional quantities, categories and notes (0.213816ms)
+✔ scaling handles supported fractions and preserves ambiguous input (0.458589ms)
+✔ timers use deadlines and paused remaining values (0.374073ms)
+✔ unavailable browser storage has safe read fallbacks (0.730741ms)
+✔ API exposes error status for conflict recovery and keeps meaningful text (0.580429ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 85.728032

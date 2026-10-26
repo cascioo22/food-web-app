@@ -1,21 +1,21 @@
-# Shared behavior
+# Pantry interaction contract
 
-Source: current owner refinement brief and `docs/REFINEMENT.md`; visual contract: `DESIGN.md`.
+Visual authority: [DESIGN.md](DESIGN.md). The owner's current direction explicitly authorizes React, Vite and Material UI, pastel colors and food illustrations. The existing FastAPI/SQLite data contracts remain authoritative.
 
-- Successful writes acknowledge only after API success. API errors preserve forms, show recovery text and remain available for retry.
-- Lists use a route (`lists.html?list=ID`), not nested modals. Back returns to the overview. Create opens the saved list. Inline edit Save commits; Cancel discards that edit only.
-- Manual order persists in SQLite; filters, category grouping and purchased grouping never write positions. Reorder is available only in the complete manual view. Stale order writes return 409 and require refresh.
-- Bulk add uses one transaction and one operation ID across retries. No automatic mutation retries without an idempotency contract. Explicit numeric merge keeps ambiguous input separate.
-- Item deletion is soft, with Undo. Clear purchased is soft, with Undo. Whole-list/recipe/photo deletions require an app confirmation.
-- Export defaults to remaining items with plain text `[ ]`, optional quantities, manual order. No claim of native Notes checkboxes. Native share only within a click; copy/download fallback always available.
-- Cooking progress/timers are device-local, keyed by recipe. Recipe-content changes invalidate checkbox progress. Timers use deadlines and do not promise background alerts.
-- No offline write queue or household sync; future work requires an authorization and conflict model. Temporary offline edits remain drafts where feasible.
-- Security source: AGENTS.md import/upload restrictions and current owner no-services instruction. No application identity exists; public exposure requires authenticated proxy protection. Live deployment and live data migration are outside this change.
+| Capability     | Canonical owner                                    | Source of truth                         | Allowed variants                                     | Verification                                       |
+| -------------- | -------------------------------------------------- | --------------------------------------- | ---------------------------------------------------- | -------------------------------------------------- |
+| Select/Listbox | Material UI Select, authored popup                 | MUI 9; theme.js                         | Filters, category, destination                       | Real popup selection in react_browser.cjs          |
+| Form           | MUI TextField with explicit application validation | API schemas, RecipeEditor, page actions | Inline grocery; page recipe editor; upload dialog    | Failed-save retention and form CRUD browser checks |
+| Scrollbar      | Document CSS baseline                              | styles.css                              | Document, menu and dialog overflow                   | Responsive and reduced-motion sweep                |
+| Toast          | UIProvider Snackbar/Alert                          | components/UI.jsx                       | Success/error, persistent Undo                       | Delete/undo and error recovery checks              |
+| CRUD           | API + per-screen transactions                      | backend/app.py                          | Full page details, inline item changes, photo dialog | Backend and production-build browser suites        |
 
-| Capability     | Canonical owner                       | Source of truth              | Allowed variants              | Verification                     |
-| -------------- | ------------------------------------- | ---------------------------- | ----------------------------- | -------------------------------- |
-| Select/Listbox | Native HTML select                    | main.css / OS popup          | Category, sort, destination   | refinement_browser.cjs           |
-| Form           | Labeled HTML form with app validation | ui.js and owning page script | Inline grocery, recipe rows   | test_refinement.py / browser     |
-| Scrollbar      | Global CSS baseline                   | main.css canonical tokens    | Document and dialog scroll    | Responsive browser sweep         |
-| Toast          | FoodUI.toast                          | ui.js                        | Status, actionable undo       | Delete/undo browser scenario     |
-| CRUD           | Page-owned API flows                  | app.py typed schemas         | Grocery route, recipe overlay | Production API and browser tests |
+- Same operation uses the same control family and vocabulary throughout the app. Success is reported only after the server confirms the write. Failed forms stay editable.
+- Recipes and grocery details use routes; the existing `.html` URLs remain valid. Recipe editing is a page, with unsaved-change guards for app navigation, browser Back, and page unload.
+- Only one overflow menu opens at a time. MUI owns dialog/menu focus, Escape and return focus. Native confirmation is used only for actual browser unload; app confirmation uses a MUI dialog.
+- The complete manual item order is authoritative. Category grouping, search and purchased visibility are display-only. Pointer/touch/keyboard dragging uses dnd-kit; move-up/down menu items provide another accessible path.
+- Grocery checking updates immediately, then saves; failures roll back visibly. Bulk additions retain an operation ID across identical retries. Input typed while a save is in flight must not be erased by that save.
+- Deleting one item or clearing purchased items offers backend-backed Undo. Whole lists, recipes and photos require confirmation before permanent deletion.
+- Export defaults to remaining items, quantities and canonical order, with plain text `[ ]` marks. Copy, native share, text download and print work independently. No direct Notes integration is claimed.
+- Cooking progress and timers stay device-local and recipe-specific. Content changes invalidate checkbox progress; timers use absolute deadlines, with no promise of background notifications.
+- No identity, sync model, PWA write queue, external analytics or paid service was added. All live data and access controls remain on the owner's existing backend/deployment.
