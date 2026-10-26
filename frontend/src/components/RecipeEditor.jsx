@@ -9,6 +9,10 @@ import {
   Chip,
   IconButton,
   Paper,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   Tab,
   Tabs,
@@ -26,6 +30,7 @@ import LinkRounded from "@mui/icons-material/LinkRounded";
 import { api, lines } from "../lib/api";
 import { ActionButton, ErrorText, useUI } from "./UI";
 import { useData } from "../App";
+import { mealCategories, mealCategory } from "../lib/mealCategories";
 const blank = {
   title: "",
   description: "",
@@ -440,7 +445,6 @@ export default function RecipeEditor({ recipe }) {
                   ["prep_time", "Prep time"],
                   ["cook_time", "Cook time"],
                   ["servings", "Servings"],
-                  ["category", "Category"],
                 ].map(([key, label]) => (
                   <TextField
                     key={key}
@@ -449,6 +453,24 @@ export default function RecipeEditor({ recipe }) {
                     onChange={(e) => change(key, e.target.value)}
                   />
                 ))}
+                <FormControl fullWidth>
+                  <InputLabel id="edit-meal-category-label">
+                    Category
+                  </InputLabel>
+                  <Select
+                    labelId="edit-meal-category-label"
+                    label="Category"
+                    value={mealCategory(draft.category)}
+                    onChange={(e) => change("category", e.target.value)}
+                  >
+                    <MenuItem value="">Uncategorized</MenuItem>
+                    {mealCategories.map((category) => (
+                      <MenuItem key={category} value={category}>
+                        {category}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Box>
             </Stack>
           </Paper>
