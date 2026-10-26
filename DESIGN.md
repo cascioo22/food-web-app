@@ -1,25 +1,25 @@
-# Food Webapp design context
+# Pantry design system
 
-## Product
+## Direction and authority
 
-An everyday recipe, cooking and shopping companion. The primary devices are phones in kitchens and grocery stores, with desktop planning support. English, native browser input/select behavior and system fonts are intentional. No external font requests.
+The owner's screenshot feedback requests a cohesive, polished UI with much less filler copy. Subsequent direction from Brooke explicitly requests a cutesy design, light pastel colors, and small illustrated food icons. These choices supersede the earlier green/plain-HTML design. React + Vite + Material UI is explicitly authorized.
 
-## Visual direction
+## Visual system
 
-Fresh garden greens, pale celery surfaces, white recipe cards, dark herb text and restrained amber keyboard focus. A grocery list reads like a useful shopping slip: names first, optional amounts/notes beneath, checkboxes within easy reach. Avoid dashboard statistics, decorative gradients and oversized branding.
+- **Character:** a cheerful personal recipe notebook; compact, tidy and useful. Quiet pastel surfaces carry the playful character while dark text, consistent spacing and familiar controls preserve clarity.
+- **Palette:** paper #FFFCF9; ink #433A46; secondary ink #756A76; accessible rose #A24B66 for active controls; blush #FBE9EE, mint #E7F1E9, lavender #EFE9F8, butter #FFF2D7 and peach #FCEADB for panels/illustration tiles. Decorative pastel colors never carry essential text without dark ink.
+- **Type:** locally hosted DM Sans for controls/body, locally hosted Quicksand for headings and the Pantry wordmark. No external font calls. Compact headings replace introductory slogans.
+- **Shape and density:** 16px cards, 12px controls, 8px spacing base; 16px phone gutters and 24px larger gutters. Grocery rows 64px in planning, 78px in shopping. Icon actions have 40px hitboxes and checkboxes have padded targets.
+- **Illustration:** original soft gouache/pencil food atlas, used as small decorative icons. Stable food illustrations distinguish lists and intentional recipe placeholders; actual uploaded recipe photos remain authoritative. No sample recipes or fabricated food photography are inserted.
 
-## Tokens
+## Runtime owners
 
-The runtime source of truth is `frontend/css/main.css`'s canonical token block. Brand `--color-primary` #315d48; dark brand #244736; background #f7f8f3; surface #ffffff; text #25342c; secondary text #5e6c62; border #d9e0d5. Body typography uses the existing system sans stack; headings use weight/spacing for emphasis. Existing spacing scale 4/8/16/24/32px is retained. Radius 8/12/18px for controls/cards/dialogs. No generated token adapter.
+`frontend/src/theme.js` owns Material UI tokens and component variants. `styles.css` contains only document baseline, safe areas, scrollbar, reduced motion, print and focus rules. No old CSS file is loaded. MUI owns menus, focus management, dialogs, forms and feedback. dnd-kit owns pointer/touch/keyboard dragging and announcements, with move-up/down menu alternatives.
 
-## Components
+## Behavior
 
-`ui.js`: API failures, status messages, native-dialog confirmation, legacy-overlay focus containment. `reorder.js`: pointer drag and visible button alternatives. `main.css`: shared buttons, inputs, states, navigation, cards. Keep API identity separate from visual order. Native selects use OS-owned popups. Search clears immediately.
+Recipes, lists and photos share one compact header and mobile bottom navigation. Full page recipe detail/editing preserves space; one overflow menu is open at a time. Helper text appears only where it explains a consequential limitation or error. No slogans, repeated keyboard instructions, large blank image blocks or visible edit/delete button piles.
 
-## Accessibility
+## Delivery and verification
 
-Visible focus, semantic buttons/links, 44px control targets, large shopping checkboxes, text status in addition to color, reduced motion. Pointer drags have move-up/down buttons. Forms retain failures and use inline validation. Modal dialogs return focus.
-
-## Boundaries and review
-
-Warm and welcoming comes from useful spacing, calm green surfaces and clear food content; never add fake recipes. Screen layout scrolls naturally. No root fixed-height containment. Test 390px phone, 768px tablet and 1280px desktop before acceptance.
+The build emits versioned JS/CSS/fonts/image assets. Nginx serves HTML with revalidation and hashed assets with immutable caching to prevent mixed markup/style versions. Existing .html links resolve to the React app. No database schema/API contract changes are required by the UI migration. Verify actual production assets, phone/tablet/desktop, touch/keyboard dragging, all mutations, failure retention and reduced motion before acceptance. Physical iOS testing remains separate.

@@ -1,0 +1,77 @@
+{
+  "findings": [
+    {
+      "category": "violation",
+      "file": "frontend/src/components/RecipeDetail.jsx",
+      "line": 692,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "frontend/src/components/GroceryItem.jsx",
+      "line": 108,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: Material UI Select.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "frontend/src/components/PhotoUpload.jsx",
+      "line": 117,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: Material UI Select.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "frontend/src/components/Transfer.jsx",
+      "line": 134,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: Material UI Select.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "frontend/src/pages/Lists.jsx",
+      "line": 1008,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: Material UI Select.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "frontend/src/pages/Photos.jsx",
+      "line": 216,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: Material UI Select.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "frontend/src/pages/Recipes.jsx",
+      "line": 218,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: Material UI Select.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    }
+  ],
+  "mode": "strict",
+  "projectRoot": "/workspace/scratch/ceb78d53d0bc/food-web-app",
+  "schemaVersion": 1,
+  "summary": {
+    "errors": 7,
+    "total": 7,
+    "unresolved": 0,
+    "violations": 7,
+    "warnings": 0
+  }
+}

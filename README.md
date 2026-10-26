@@ -1,6 +1,6 @@
 # Food Webapp
 
-A lightweight recipe collection, cooking companion and grocery app. Vanilla HTML/CSS/JavaScript, FastAPI, SQLAlchemy, SQLite and Docker Compose; no frontend build or external service required.
+A pastel recipe collection, cooking companion and grocery app. The frontend uses React, Vite and Material UI with small illustrated food icons. FastAPI, SQLAlchemy, SQLite and the existing Docker volume remain unchanged. No external runtime service is required.
 
 ## Run
 
@@ -10,15 +10,26 @@ docker compose up --build -d
 
 Open `http://localhost:3000`. Nginx serves the UI and proxies API/photo requests on the same origin. SQLite and photos live in the `backend_data` volume. The API port binds to localhost by default. Do not remove this volume during upgrades.
 
-For development without Docker:
+For local development, use Node 24+ and Python 3.11+ in two terminals:
 
 ```bash
+# API terminal — use a disposable development database, not your live volume.
 python -m pip install -r backend/requirements.txt pytest httpx
-PYTHONPATH=tests DATABASE_URL=sqlite:///./dev.db PHOTO_UPLOAD_DIR=./dev-photos \
-  python -m uvicorn serve_ui:app --host 127.0.0.1 --port 3000
+PYTHONPATH=backend DATABASE_URL=sqlite:///./dev.db PHOTO_UPLOAD_DIR=./dev-photos \
+  python -m uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
-`tests/serve_ui.py` is a development/QA static mount; production continues to use Nginx. API documentation is at `/docs` on the backend port. The `pyproject.toml` console entry point is historical; use the commands above.
+```bash
+# Frontend terminal
+npm ci --prefix frontend
+npm run dev --prefix frontend
+```
+
+Open the Vite URL printed in the terminal. The dev server proxies `/api` and photo requests to port 8000. Production uses a multi-stage Docker build: Node builds `frontend/dist`, then Nginx serves only the built assets. Legacy `/index.html`, `/lists.html`, `/photos.html` and `/cooking.html?recipe_id=…` links remain valid React routes. No old page scripts or stylesheet are loaded.
+
+To update an existing deployment, pull the approved revision and rebuild the frontend with `docker compose up --build -d frontend`. This UI migration does not change the database schema. Keep the existing `backend_data` volume and proxy/access configuration. HTML revalidates; hashed `/assets/` files use immutable caching so new markup and styles are delivered together.
+
+API documentation is at `/docs` on the backend port. `tests/serve_react.py` serves the actual production build with a disposable API for QA; it is not the production web server. The older `pyproject.toml` console entry point and `tests/serve_ui.py` are historical.
 
 ## Everyday use
 
@@ -53,7 +64,8 @@ The broad historical suite has pre-existing collection failures and contains emb
 
 ```bash
 PYTHONPATH=backend python -m pytest tests/test_refinement.py tests/test_ui_repair_import.py -q
-node tests/refinement_pure.cjs
+npm run test --prefix frontend
+npm run build --prefix frontend
 ```
 
 For full browser/API checks, install test-only browser dependencies and run:
@@ -61,17 +73,19 @@ For full browser/API checks, install test-only browser dependencies and run:
 ```bash
 npm install --prefix .qa playwright
 .qa/node_modules/.bin/playwright install chromium
-node tests/refinement_browser.cjs
+node tests/react_browser.cjs
 ```
 
 The runner starts its own disposable database/server, tests phone/tablet/desktop, performs mouse/touch/keyboard drag, restarts the server, captures screenshots and runs existing production API checks. Optional `CHROMIUM_EXECUTABLE` and JSON `CHROMIUM_ARGS` choose an existing local test browser. It does not connect to your deployed instance.
 
-Before captures can be reproduced with `git worktree add ../food-before fe966661`, then `node tests/capture_before.cjs`; override `FOOD_BEFORE_ROOT` if the worktree is elsewhere. Baseline fixtures are synthetic test records only.
+Visual preview captures use synthetic, disposable recipes and lists: `node tests/react_preview.cjs`. No sample recipes are shipped as user data. The older vanilla UI browser scripts and evidence are retained as historical records; run the current React suite for this version.
 
-See [implementation inventory and decisions](docs/REFINEMENT.md), [verification report](docs/REFINEMENT_REPORT.md), [design language](DESIGN.md), and [shared behavior contract](UX-CONTRACT.md). Raw evidence and before/after screenshots are in `docs/evidence/refinement/`.
+See [React redesign and verification](docs/REACT_REDESIGN.md), [design language](DESIGN.md), and [shared behavior contract](UX-CONTRACT.md). Current screenshots/evidence are in `docs/evidence/react-redesign/`. Previous implementation evidence remains in `docs/evidence/refinement/`.
 
 ## Active code and future work
 
-Docker loads `backend/app.py`; HTML loads `recipe_library.js`, `lists.js`, `photos.js`, `cooking_mode.js` and shared helpers. `main.js`, `recipe_library_fixed.js`, `app_new.py` and `app_fixed.py` are historical and are not loaded by active pages/containers. Some old tests/tools still import them, so they have deliberately not been deleted under this refinement.
+Docker loads `backend/app.py`; the frontend starts at `frontend/src/main.jsx`. `App.jsx` owns routing and API collections. Page components lazy-load recipes, lists, photos and cooking; shared components own editors, dialogs, timers, drag/drop, feedback and export. `theme.js` owns tokens and `styles.css` owns only document-level behavior.
+
+The old HTML pages, scripts and legacy stylesheet were removed after their workflows were replaced by React. The old backend alternatives (`app_new.py`, `app_fixed.py`) remain because historical tests/debug tools still import them. They are not loaded by Docker.
 
 Favorites, recently cooked and personal notes are included. Meal planning, collections, pantry tracking, a versioned JSON restore format, offline/PWA editing and household collaboration remain optional follow-up work. Offline editing requires an explicit sync/conflict design and shared access needs authorization first. The current app reports network failures, keeps quick-add drafts per list and retains failed edits; it does not queue silent offline writes.

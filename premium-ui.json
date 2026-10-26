@@ -1,6 +1,6 @@
 {
   "profile": "product-admin",
-  "sourceRoots": ["frontend"],
+  "sourceRoots": ["frontend/src"],
   "canonicalMap": "UX-CONTRACT.md",
   "requiredCapabilities": [
     "Select/Listbox",
@@ -9,15 +9,19 @@
     "Toast",
     "CRUD"
   ],
-  "ownership": { "Select/Listbox": "native", "Date": "native" },
+  "ownership": {
+    "Select/Listbox": "Material UI Select",
+    "Date": "native"
+  },
   "commands": {
     "test": "PYTHONPATH=backend python -m pytest tests/test_refinement.py tests/test_ui_repair_import.py -q",
-    "pure": "node tests/refinement_pure.cjs",
-    "browser": "node tests/refinement_browser.cjs"
+    "pure": "npm run test --prefix frontend",
+    "browser": "node tests/react_browser.cjs",
+    "build": "npm run build --prefix frontend"
   },
-  "requiredCommands": ["test", "pure", "browser"],
+  "requiredCommands": ["test", "pure", "build", "browser"],
   "evidence": {
-    "crudFullFlow": "tests/refinement_browser.cjs",
+    "crudFullFlow": "tests/react_browser.cjs",
     "failurePaths": "tests/test_refinement.py"
   }
 }
