@@ -5,7 +5,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - DATABASE_URL=sqlite:////app/data/foodweb.db
       - PHOTO_UPLOAD_DIR=/app/data/uploads/photos

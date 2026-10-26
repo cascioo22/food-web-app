@@ -1,0 +1,23 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["frontend"],
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": [
+    "Select/Listbox",
+    "Form",
+    "Scrollbar",
+    "Toast",
+    "CRUD"
+  ],
+  "ownership": { "Select/Listbox": "native", "Date": "native" },
+  "commands": {
+    "test": "PYTHONPATH=backend python -m pytest tests/test_refinement.py tests/test_ui_repair_import.py -q",
+    "pure": "node tests/refinement_pure.cjs",
+    "browser": "node tests/refinement_browser.cjs"
+  },
+  "requiredCommands": ["test", "pure", "browser"],
+  "evidence": {
+    "crudFullFlow": "tests/refinement_browser.cjs",
+    "failurePaths": "tests/test_refinement.py"
+  }
+}

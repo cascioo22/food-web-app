@@ -115,21 +115,26 @@ def extract_recipe(html, original_url):
                 continue
             result = {'title': text(recipe['name']), 'ingredients_text': '\n'.join(text(i) for i in ingredients),
                       'steps_ordered': '\n'.join(steps), 'original_url': original_url,
-                      'prep_time': text(recipe.get('totalTime') or recipe.get('prepTime')),
+                      'prep_time': text(recipe.get('prepTime') or recipe.get('totalTime')),
+                      'cook_time': text(recipe.get('cookTime')), 'description': text(recipe.get('description')),
                       'servings': text(recipe.get('recipeYield')), 'category': text(recipe.get('recipeCategory'))}
             nutrition = recipe.get('nutrition') or {}
+            if not isinstance(nutrition, dict):
+                nutrition = {}
             fields = {'calories': 'calories_per_serving', 'proteinContent': 'protein_per_serving',
                       'carbohydrateContent': 'carbohydrates_per_serving', 'fatContent': 'fat_per_serving',
                       'fiberContent': 'fiber_per_serving', 'sugarContent': 'sugar_per_serving', 'sodiumContent': 'sodium_per_serving'}
             parsed_nutrition = {}
             for source, target in fields.items():
                 value = str(nutrition.get(source, ''))
-                match = re.search(r'\d+(?:\.\d+)?', value)
+                match = re.search(r'[-+]?\d+(?:\.\d+)?', value)
                 if match:
                     number = float(match.group())
-                    if target == 'sodium_per_serving' and re.search(r'\bg\b', value):
+                    if number < 0 or (target == 'calories_per_serving' and re.search(r'kj', value, re.I) and not re.search(r'kcal', value, re.I)):
+                        continue
+                    if target == 'sodium_per_serving' and re.search(r'(?<!m)g\b', value, re.I):
                         number *= 1000
-                    elif target != 'calories_per_serving' and target != 'sodium_per_serving' and re.search(r'\bmg\b', value):
+                    elif target != 'calories_per_serving' and target != 'sodium_per_serving' and re.search(r'mg\b', value, re.I):
                         number /= 1000
                     parsed_nutrition[target] = number
             if nutrition.get('servingSize'):
